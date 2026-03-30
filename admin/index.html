@@ -105,7 +105,7 @@ tr.root-parent.cat-technology td { background-color: #2dd4bf60; font-weight: 600
 </head>
 <body>
 <!-- Auth bar -->
-<div class="auth-bar d-flex align-items-center gap-2 flex-wrap">
+<div id="authBarEl" style="display:none" class="auth-bar d-flex align-items-center gap-2 flex-wrap">
     <span class="fw-bold me-2"><i class="bi bi-clock-history me-1"></i>Historical Events</span>
     <button class="btn btn-primary btn-sm admin-only" id="addBtn" onclick="openAddModal()" disabled>
         <i class="bi bi-plus-lg me-1"></i>Ajouter
@@ -139,7 +139,18 @@ tr.root-parent.cat-technology td { background-color: #2dd4bf60; font-weight: 600
     <span id="authStatus" class="badge bg-secondary">Non connecté</span>
 </div>
 
-<div class="content-section">
+<!-- Login gate -->
+<div id="loginGate" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 50px);gap:1rem">
+    <h2 style="font-size:1.3rem;color:#333">histoir.es — Administration</h2>
+    <form id="loginForm" style="display:flex;flex-direction:column;gap:0.5rem;width:280px" onsubmit="doLogin(event)">
+        <input type="text" id="loginPid" class="form-control form-control-sm" placeholder="Partner ID" required>
+        <input type="password" id="loginSecret" class="form-control form-control-sm" placeholder="Secret" required>
+        <button type="submit" class="btn btn-sm btn-primary">Connexion</button>
+        <span id="loginError" class="text-danger small" style="display:none">Identifiants incorrects</span>
+    </form>
+</div>
+
+<div class="content-section" id="contentSection" style="display:none">
     <!-- Stats row -->
     <div class="row g-2 mb-2" id="statsRow">
         <div class="col-6 col-lg">
@@ -480,14 +491,52 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('fDate').addEventListener('input', autoYear);
     document.getElementById('fEndDate').addEventListener('input', autoYear);
-    // Restore auth from sessionStorage
+    // Check if already authenticated
     const pid = sessionStorage.getItem('partnerId');
     const pt = sessionStorage.getItem('partnerToken');
-    if (pid) document.getElementById('partnerId').value = pid;
-    if (pt) document.getElementById('partnerToken').value = pt;
-    if (pid && pt) updateAuthUI(true);
-    loadData();
+    if (pid && pt) {
+        showAdmin(pid, pt);
+    }
+    // Pre-fill login from session
+    if (pid) document.getElementById('loginPid').value = pid;
 });
+
+async function doLogin(e) {
+    e.preventDefault();
+    const pid = document.getElementById('loginPid').value.trim();
+    const secret = document.getElementById('loginSecret').value.trim();
+
+    try {
+        // Compute HMAC token
+        const token = await computeHmacToken(pid, secret);
+
+        // Test auth against /meta
+        const res = await fetch(BASE + '/meta', {
+            headers: { 'X-Partner-ID': pid, 'X-Partner-Token': token }
+        });
+
+        if (res.ok) {
+            sessionStorage.setItem('partnerId', pid);
+            sessionStorage.setItem('partnerToken', secret);
+            showAdmin(pid, secret);
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    } catch (err) {
+        document.getElementById('loginError').textContent = err.message;
+        document.getElementById('loginError').style.display = 'block';
+    }
+}
+
+function showAdmin(pid, secret) {
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('contentSection').style.display = 'block';
+    document.getElementById('authBarEl').style.display = '';
+    document.getElementById('partnerId').value = pid;
+    document.getElementById('partnerToken').value = secret;
+    updateAuthUI(true);
+    loadData();
+}
 
 // --- Auth ---
 function saveAuth() {
