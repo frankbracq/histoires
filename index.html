@@ -16,60 +16,56 @@
     <header class="site-header">
         <div class="header-inner">
             <a href="/" class="logo">histoir<span class="logo-dot">.es</span></a>
-            <nav class="header-nav">
-                <a href="#timeline" class="nav-link active">Chronologie</a>
-                <a href="#categories" class="nav-link">Catégories</a>
-                <a href="#leaders" class="nav-link">Dirigeants</a>
-            </nav>
             <div class="header-search">
                 <i class="bi bi-search"></i>
-                <input type="text" id="searchInput" placeholder="Rechercher un événement..." autocomplete="off">
+                <input type="text" id="searchInput" placeholder="Rechercher..." autocomplete="off">
             </div>
+            <span class="header-count" id="eventCount"></span>
         </div>
     </header>
 
-    <!-- Hero -->
-    <section class="hero">
-        <div class="hero-inner">
-            <h1>L'Histoire de France</h1>
-            <p class="hero-subtitle">De Clovis à nos jours — <span id="eventCount">...</span> événements</p>
+    <!-- Timeline bar -->
+    <section class="timeline-section">
+        <!-- Century selector -->
+        <nav class="century-bar" id="centuryBar">
+            <!-- Populated by JS -->
+        </nav>
+
+        <!-- Horizontal scrollable timeline -->
+        <div class="timeline-viewport">
+            <div class="timeline-scroll" id="timelineScroll">
+                <!-- Leaders band -->
+                <div class="tl-band tl-leaders" id="leadersBand"></div>
+                <!-- Wars band -->
+                <div class="tl-band tl-wars" id="warsBand"></div>
+                <!-- Period markers -->
+                <div class="tl-periods" id="periodMarkers"></div>
+            </div>
         </div>
     </section>
 
-    <!-- Century navigation -->
-    <nav class="century-nav" id="centuryNav">
-        <div class="century-nav-inner">
-            <!-- Populated by JS -->
-        </div>
-    </nav>
-
     <!-- Main content -->
     <main class="main-content">
-        <!-- Category filters -->
+        <!-- Sidebar filters -->
         <aside class="sidebar" id="sidebar">
             <h3>Catégories</h3>
-            <div class="category-filters" id="categoryFilters">
-                <!-- Populated by JS -->
-            </div>
+            <div id="categoryFilters"></div>
             <h3>Portée</h3>
-            <div class="scope-filters" id="scopeFilters">
-                <!-- Populated by JS -->
-            </div>
+            <div id="scopeFilters"></div>
         </aside>
 
-        <!-- Events list -->
-        <section class="events-panel" id="eventsPanel">
+        <!-- Events for selected period -->
+        <section class="events-panel">
             <div class="events-header">
                 <h2 id="periodTitle">Chargement...</h2>
-                <span class="event-count-badge" id="filteredCount"></span>
+                <span class="events-count" id="filteredCount"></span>
             </div>
-            <div class="events-list" id="eventsList">
+            <div class="events-grid" id="eventsGrid">
                 <!-- Populated by JS -->
             </div>
         </section>
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>histoir.es — Données issues de sources historiques et Wikipedia</p>
     </footer>
