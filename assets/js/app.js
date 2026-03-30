@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         buildFilters();
         setupSearch();
         setupDragScroll();
+        setupTimelineNav();
+        setupKeyboardNav();
         setupOffcanvas();
 
         selectCentury(18);
@@ -105,7 +107,7 @@ function buildTimeline() {
         periodStarts.push(y);
     }
 
-    const PX_PER_PERIOD = Math.max(80, Math.min(120, Math.floor(window.innerWidth / periodStarts.length)));
+    const PX_PER_PERIOD = 140; // fixed width for comfortable scrolling
     const totalWidth = periodStarts.length * PX_PER_PERIOD;
 
     const scroll = document.getElementById('timelineScroll');
@@ -198,9 +200,14 @@ function selectPeriodFromBar(ps) {
         p.classList.toggle('active', Number(p.dataset.start) === ps)
     );
 
-    // Scroll into view
+    // Scroll period into view within the timeline viewport
     const el = document.querySelector(`.tl-period[data-start="${ps}"]`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    if (el) {
+        const vp = document.getElementById('timelineViewport');
+        const elLeft = el.offsetLeft;
+        const vpWidth = vp.clientWidth;
+        vp.scrollLeft = elLeft - vpWidth / 2 + el.offsetWidth / 2;
+    }
 
     // Build year pills
     buildYearPills(ps);
@@ -375,6 +382,81 @@ function renderEvents(events) {
     }
 
     grid.innerHTML = html.join('');
+}
+
+// ===================================================================
+// Timeline scroll navigation (arrows + keyboard)
+// ===================================================================
+function setupTimelineNav() {
+    const vp = document.getElementById('timelineViewport');
+    document.getElementById('tlNavLeft').onclick = () => { vp.scrollLeft -= 300; };
+    document.getElementById('tlNavRight').onclick = () => { vp.scrollLeft += 300; };
+}
+
+function setupKeyboardNav() {
+    document.addEventListener('keydown', (e) => {
+        // Don't capture if typing in search
+        if (e.target.tagName === 'INPUT') return;
+
+        const vp = document.getElementById('timelineViewport');
+        switch (e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                if (e.shiftKey) {
+                    // Shift+Left: previous period
+                    navigatePeriod(-1);
+                } else {
+                    // Left: previous year
+                    navigateYear(-1);
+                }
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                if (e.shiftKey) {
+                    // Shift+Right: next period
+                    navigatePeriod(1);
+                } else {
+                    // Right: next year
+                    navigateYear(1);
+                }
+                break;
+            case 'Home':
+                e.preventDefault();
+                vp.scrollLeft = 0;
+                break;
+            case 'End':
+                e.preventDefault();
+                vp.scrollLeft = vp.scrollWidth;
+                break;
+        }
+    });
+}
+
+function navigateYear(direction) {
+    if (activeYear === null) return;
+    const pills = [...document.querySelectorAll('.yr-pill:not(:disabled)')];
+    const years = pills.map(p => Number(p.dataset.year));
+    const idx = years.indexOf(activeYear);
+    const next = idx + direction;
+    if (next >= 0 && next < years.length) {
+        selectYear(years[next]);
+    } else if (direction > 0) {
+        // Move to next period
+        navigatePeriod(1);
+    } else {
+        // Move to previous period
+        navigatePeriod(-1);
+    }
+}
+
+function navigatePeriod(direction) {
+    const periodEls = [...document.querySelectorAll('.tl-period[data-start]')];
+    const starts = periodEls.filter(p => p.style.opacity !== '0.35').map(p => Number(p.dataset.start));
+    const idx = starts.indexOf(activePeriodStart);
+    const next = idx + direction;
+    if (next >= 0 && next < starts.length) {
+        selectPeriodFromBar(starts[next]);
+    }
 }
 
 // ===================================================================

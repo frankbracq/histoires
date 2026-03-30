@@ -104,15 +104,38 @@ body {
 .c-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .c-btn .cnt { font-size: 0.6rem; opacity: 0.65; margin-left: 2px; }
 
+/* Timeline wrapper with nav arrows */
+.timeline-wrapper {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+.tl-nav {
+    flex-shrink: 0;
+    width: 32px;
+    border: none;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    border-right: 1px solid var(--border);
+}
+.tl-nav:last-child { border-right: none; border-left: 1px solid var(--border); }
+.tl-nav:hover { background: var(--accent-light); color: var(--text); }
+
 /* Timeline viewport */
 .timeline-viewport {
+    flex: 1;
     position: relative;
     overflow-x: auto;
     overflow-y: hidden;
     cursor: grab;
+    scroll-behavior: smooth;
 }
 .timeline-viewport:active { cursor: grabbing; }
-.timeline-viewport::-webkit-scrollbar { height: 6px; }
+.timeline-viewport::-webkit-scrollbar { height: 5px; }
 .timeline-viewport::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
 
 .timeline-scroll {
