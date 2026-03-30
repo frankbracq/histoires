@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>histoir.es — Administration</title>
+    <meta name="robots" content="noindex, nofollow">
+    <style>
+        /* Redirect to worker admin — this page serves as a proxy frame */
+        body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; }
+        .admin-frame { width: 100vw; height: 100vh; border: none; }
+        .auth-gate {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; height: 100vh; gap: 1rem;
+            background: #f8f9fa;
+        }
+        .auth-gate h1 { font-size: 1.5rem; color: #333; }
+        .auth-gate form { display: flex; flex-direction: column; gap: 0.5rem; width: 300px; }
+        .auth-gate input {
+            padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .auth-gate button {
+            padding: 0.5rem; background: #8b4513; color: #fff; border: none;
+            border-radius: 4px; font-size: 0.9rem; cursor: pointer;
+        }
+        .auth-gate button:hover { background: #6d3710; }
+        .error { color: #dc3545; font-size: 0.85rem; display: none; }
+    </style>
+</head>
+<body>
+    <div class="auth-gate" id="authGate">
+        <h1>histoir.es — Admin</h1>
+        <form onsubmit="authenticate(event)">
+            <input type="text" id="partnerId" placeholder="Partner ID" required>
+            <input type="password" id="partnerSecret" placeholder="Partner Secret" required>
+            <button type="submit">Connexion</button>
+            <span class="error" id="authError">Identifiants incorrects</span>
+        </form>
+    </div>
+    <iframe class="admin-frame" id="adminFrame" style="display:none"></iframe>
+
+    <script>
+    const API_BASE = 'https://historical-events.genealogie.app';
+
+    async function authenticate(e) {
+        e.preventDefault();
+        const pid = document.getElementById('partnerId').value.trim();
+        const secret = document.getElementById('partnerSecret').value.trim();
+
+        try {
+            // Generate HMAC token
+            const encoder = new TextEncoder();
+            const key = await crypto.subtle.importKey(
+                'raw', encoder.encode(secret),
+                { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+            );
+            const date = new Date().toISOString().split('T')[0];
+            const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(pid + '-' + date));
+            const token = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+            // Test auth
+            const res = await fetch(`${API_BASE}/meta`, {
+                headers: { 'X-Partner-ID': pid, 'X-Partner-Token': token }
+            });
+
+            if (res.ok) {
+                // Store credentials
+                sessionStorage.setItem('histoires_pid', pid);
+                sessionStorage.setItem('histoires_secret', secret);
+
+                // Load admin iframe
+                document.getElementById('authGate').style.display = 'none';
+                const frame = document.getElementById('adminFrame');
+                frame.src = `${API_BASE}/admin`;
+                frame.style.display = 'block';
+
+                // Inject credentials into iframe after load
+                frame.onload = () => {
+                    try {
+                        frame.contentWindow.postMessage({
+                            type: 'histoires-auth',
+                            partnerId: pid,
+                            partnerSecret: secret
+                        }, '*');
+                    } catch {}
+                };
+            } else {
+                document.getElementById('authError').style.display = 'block';
+            }
+        } catch (err) {
+            document.getElementById('authError').textContent = err.message;
+            document.getElementById('authError').style.display = 'block';
+        }
+    }
+
+    // Auto-fill from session
+    const savedPid = sessionStorage.getItem('histoires_pid');
+    const savedSecret = sessionStorage.getItem('histoires_secret');
+    if (savedPid && savedSecret) {
+        document.getElementById('partnerId').value = savedPid;
+        document.getElementById('partnerSecret').value = savedSecret;
+    }
+    </script>
+</body>
+</html>

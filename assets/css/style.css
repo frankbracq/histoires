@@ -1,0 +1,397 @@
+/* === Reset & Base === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --color-bg: #faf9f6;
+    --color-surface: #fff;
+    --color-text: #2c2c2c;
+    --color-text-muted: #6c757d;
+    --color-border: #e8e5e0;
+    --color-accent: #8b4513;
+    --color-accent-light: #f5ebe0;
+    --header-height: 56px;
+    --sidebar-width: 220px;
+
+    /* Category colors */
+    --cat-politics: #1a5276;
+    --cat-geopolitics: #c0392b;
+    --cat-territory: #6c3483;
+    --cat-colonisation: #8b4513;
+    --cat-science: #2980b9;
+    --cat-culture: #8e44ad;
+    --cat-economy: #27ae60;
+    --cat-health: #e67e22;
+    --cat-society: #16a085;
+    --cat-technology: #2dd4bf;
+}
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.5;
+    min-height: 100vh;
+}
+
+/* === Header === */
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    height: var(--header-height);
+}
+.header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+.logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-text);
+    text-decoration: none;
+}
+.logo-dot { color: var(--color-accent); }
+
+.header-nav {
+    display: flex;
+    gap: 1rem;
+}
+.header-nav .nav-link {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    padding: 0.25rem 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+}
+.header-nav .nav-link:hover,
+.header-nav .nav-link.active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-accent);
+}
+
+.header-search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+}
+.header-search i { color: var(--color-text-muted); font-size: 0.85rem; }
+.header-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.8rem;
+    width: 200px;
+    color: var(--color-text);
+}
+
+/* === Hero === */
+.hero {
+    background: linear-gradient(135deg, #2c1810 0%, #5c3a28 50%, #8b4513 100%);
+    color: #fff;
+    padding: 3rem 1.5rem 2rem;
+    text-align: center;
+}
+.hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+.hero-subtitle {
+    font-size: 1rem;
+    opacity: 0.85;
+}
+
+/* === Century navigation === */
+.century-nav {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: var(--header-height);
+    z-index: 90;
+    overflow-x: auto;
+}
+.century-nav-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0.5rem 1.5rem;
+    display: flex;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+.century-btn {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.century-btn:hover { background: var(--color-accent-light); color: var(--color-text); }
+.century-btn.active {
+    background: var(--color-accent);
+    color: #fff;
+    border-color: var(--color-accent);
+}
+.century-btn .count {
+    font-size: 0.65rem;
+    opacity: 0.7;
+    margin-left: 0.2rem;
+}
+
+/* === Main layout === */
+.main-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    min-height: 60vh;
+}
+
+/* === Sidebar === */
+.sidebar {
+    flex-shrink: 0;
+    width: var(--sidebar-width);
+    position: sticky;
+    top: calc(var(--header-height) + 46px);
+    align-self: flex-start;
+    max-height: calc(100vh - var(--header-height) - 60px);
+    overflow-y: auto;
+}
+.sidebar h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+}
+.sidebar h3:first-child { margin-top: 0; }
+
+.category-filters, .scope-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.5rem;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    font-size: 0.78rem;
+    color: var(--color-text);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+.filter-btn:hover { background: var(--color-accent-light); }
+.filter-btn.active { background: var(--color-accent-light); font-weight: 600; }
+.filter-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.filter-count {
+    margin-left: auto;
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+}
+
+/* === Events panel === */
+.events-panel {
+    flex: 1;
+    min-width: 0;
+}
+.events-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.events-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.event-count-badge {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* === Event card === */
+.event-card {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    border-left: 4px solid var(--color-text-muted);
+    transition: box-shadow 0.2s, border-color 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+.event-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-color: rgba(0,0,0,0.15);
+    text-decoration: none;
+    color: inherit;
+}
+.event-card[data-cat="politics"]     { border-left-color: var(--cat-politics); }
+.event-card[data-cat="geopolitics"]  { border-left-color: var(--cat-geopolitics); }
+.event-card[data-cat="territory"]    { border-left-color: var(--cat-territory); }
+.event-card[data-cat="colonisation"] { border-left-color: var(--cat-colonisation); }
+.event-card[data-cat="science"]      { border-left-color: var(--cat-science); }
+.event-card[data-cat="culture"]      { border-left-color: var(--cat-culture); }
+.event-card[data-cat="economy"]      { border-left-color: var(--cat-economy); }
+.event-card[data-cat="health"]       { border-left-color: var(--cat-health); }
+.event-card[data-cat="society"]      { border-left-color: var(--cat-society); }
+.event-card[data-cat="technology"]   { border-left-color: var(--cat-technology); }
+
+.event-card-img {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #f0f0f0;
+}
+.event-card-img-placeholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.event-card-body {
+    flex: 1;
+    min-width: 0;
+}
+.event-card-topline {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.15rem;
+}
+.event-card-date {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+.event-card-badges {
+    display: flex;
+    gap: 0.3rem;
+}
+.event-badge {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-weight: 500;
+    color: #fff;
+}
+.event-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 0.2rem;
+}
+.event-card-summary {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.event-card-enddate {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+}
+
+/* === Leader cards (subtype=leader) === */
+.event-card.leader-card {
+    border-left-width: 4px;
+}
+.leader-badge {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    color: #fff;
+}
+.dynasty-merovingiens { background-color: #5b7553; }
+.dynasty-carolingiens { background-color: #8b6914; }
+.dynasty-robertiens   { background-color: #6b8e6b; }
+.dynasty-capetiens    { background-color: #1a5276; }
+.dynasty-valois       { background-color: #6c3483; }
+.dynasty-bourbons     { background-color: #b8860b; }
+.dynasty-orleans      { background-color: #d4a017; }
+.regime-republic      { background-color: #2c5f8a; }
+.regime-empire        { background-color: #6b3a6b; }
+.regime-revolution    { background-color: #c0392b; }
+.regime-transitional  { background-color: #7f8c8d; }
+
+/* === Footer === */
+.site-footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--color-border);
+    margin-top: 3rem;
+}
+
+/* === Loading === */
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+    padding: 3rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .sidebar { display: none; }
+    .header-search input { width: 120px; }
+    .hero h1 { font-size: 1.8rem; }
+    .header-nav { display: none; }
+}

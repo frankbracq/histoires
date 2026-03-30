@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>histoir.es — Chronologie de l'Histoire de France</title>
+    <meta name="description" content="Explorez l'histoire de France de Clovis à nos jours : événements, dirigeants, guerres, sciences, culture.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="site-header">
+        <div class="header-inner">
+            <a href="/" class="logo">histoir<span class="logo-dot">.es</span></a>
+            <nav class="header-nav">
+                <a href="#timeline" class="nav-link active">Chronologie</a>
+                <a href="#categories" class="nav-link">Catégories</a>
+                <a href="#leaders" class="nav-link">Dirigeants</a>
+            </nav>
+            <div class="header-search">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchInput" placeholder="Rechercher un événement..." autocomplete="off">
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-inner">
+            <h1>L'Histoire de France</h1>
+            <p class="hero-subtitle">De Clovis à nos jours — <span id="eventCount">...</span> événements</p>
+        </div>
+    </section>
+
+    <!-- Century navigation -->
+    <nav class="century-nav" id="centuryNav">
+        <div class="century-nav-inner">
+            <!-- Populated by JS -->
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <!-- Category filters -->
+        <aside class="sidebar" id="sidebar">
+            <h3>Catégories</h3>
+            <div class="category-filters" id="categoryFilters">
+                <!-- Populated by JS -->
+            </div>
+            <h3>Portée</h3>
+            <div class="scope-filters" id="scopeFilters">
+                <!-- Populated by JS -->
+            </div>
+        </aside>
+
+        <!-- Events list -->
+        <section class="events-panel" id="eventsPanel">
+            <div class="events-header">
+                <h2 id="periodTitle">Chargement...</h2>
+                <span class="event-count-badge" id="filteredCount"></span>
+            </div>
+            <div class="events-list" id="eventsList">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>histoir.es — Données issues de sources historiques et Wikipedia</p>
+    </footer>
+
+    <script src="/assets/js/app.js" type="module"></script>
+</body>
+</html>
