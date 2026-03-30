@@ -507,15 +507,21 @@ async function doLogin(e) {
     const secret = document.getElementById('loginSecret').value.trim();
 
     try {
-        // Compute HMAC token
+        // Compute HMAC token and test against authenticated endpoint
         const token = await computeHmacToken(pid, secret);
 
-        // Test auth against /meta
-        const res = await fetch(BASE + '/meta', {
-            headers: { 'X-Partner-ID': pid, 'X-Partner-Token': token }
+        const res = await fetch(BASE + '/curate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Partner-ID': pid,
+                'X-Partner-Token': token
+            },
+            body: JSON.stringify({ action: 'upsert', events: [] })
         });
 
-        if (res.ok) {
+        // 400 = auth OK but invalid body (expected), 401/403 = auth failed
+        if (res.status !== 401 && res.status !== 403) {
             sessionStorage.setItem('partnerId', pid);
             sessionStorage.setItem('partnerSecret', secret);
             showAdmin(pid, secret);
