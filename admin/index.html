@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fEndDate').addEventListener('input', autoYear);
     // Check if already authenticated
     const pid = sessionStorage.getItem('partnerId');
-    const pt = sessionStorage.getItem('partnerToken');
+    const pt = sessionStorage.getItem('partnerSecret');
     if (pid && pt) {
         showAdmin(pid, pt);
     }
@@ -517,7 +517,7 @@ async function doLogin(e) {
 
         if (res.ok) {
             sessionStorage.setItem('partnerId', pid);
-            sessionStorage.setItem('partnerToken', secret);
+            sessionStorage.setItem('partnerSecret', secret);
             showAdmin(pid, secret);
         } else {
             document.getElementById('loginError').style.display = 'block';
@@ -544,12 +544,12 @@ function saveAuth() {
     const pt = document.getElementById('partnerToken').value.trim();
     if (pid && pt) {
         sessionStorage.setItem('partnerId', pid);
-        sessionStorage.setItem('partnerToken', pt);
+        sessionStorage.setItem('partnerSecret', pt);
         updateAuthUI(true);
         showToast('Credentials enregistrés', 'success');
     } else {
         sessionStorage.removeItem('partnerId');
-        sessionStorage.removeItem('partnerToken');
+        sessionStorage.removeItem('partnerSecret');
         updateAuthUI(false);
     }
 }
@@ -581,7 +581,7 @@ async function computeHmacToken(partnerId, secret) {
 
 async function getAuthHeaders() {
     const pid = sessionStorage.getItem('partnerId') || '';
-    const secret = sessionStorage.getItem('partnerToken') || '';
+    const secret = sessionStorage.getItem('partnerSecret') || '';
     if (!pid || !secret) return { 'X-Partner-ID': '', 'X-Partner-Token': '' };
     const token = await computeHmacToken(pid, secret);
     return { 'X-Partner-ID': pid, 'X-Partner-Token': token };
@@ -995,7 +995,7 @@ function toggleParent(parentId) {
 }
 
 function isAuthed() {
-    return !!(sessionStorage.getItem('partnerId') && sessionStorage.getItem('partnerToken'));
+    return !!(sessionStorage.getItem('partnerId') && sessionStorage.getItem('partnerSecret'));
 }
 
 // --- Add/Edit modal ---
