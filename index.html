@@ -20,6 +20,9 @@
                 <i class="bi bi-search"></i>
                 <input type="text" id="searchInput" placeholder="Rechercher..." autocomplete="off">
             </div>
+            <button class="filter-toggle" id="filterToggle" title="Filtres">
+                <i class="bi bi-funnel"></i>
+            </button>
             <span class="header-count" id="eventCount"></span>
         </div>
     </header>
@@ -51,17 +54,23 @@
         </div>
     </nav>
 
+    <!-- Offcanvas filters -->
+    <div class="offcanvas-overlay" id="offcanvasOverlay"></div>
+    <aside class="offcanvas-panel" id="offcanvasPanel">
+        <div class="offcanvas-header">
+            <h3>Filtres</h3>
+            <button class="offcanvas-close" id="offcanvasClose"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="offcanvas-body">
+            <h4>Catégories</h4>
+            <div id="categoryFilters"></div>
+            <h4>Portée</h4>
+            <div id="scopeFilters"></div>
+        </div>
+    </aside>
+
     <!-- Main content -->
     <main class="main-content">
-        <!-- Sidebar filters -->
-        <aside class="sidebar" id="sidebar">
-            <h3>Catégories</h3>
-            <div id="categoryFilters"></div>
-            <h3>Portée</h3>
-            <div id="scopeFilters"></div>
-        </aside>
-
-        <!-- Events for selected period -->
         <section class="events-panel">
             <div class="events-header">
                 <h2 id="periodTitle">Chargement...</h2>

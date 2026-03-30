@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         buildFilters();
         setupSearch();
         setupDragScroll();
+        setupOffcanvas();
 
         selectCentury(18);
     } catch (err) {
@@ -240,15 +241,15 @@ function selectYear(y) {
 // ===================================================================
 function buildFilters() {
     const catContainer = document.getElementById('categoryFilters');
-    addFilterBtn(catContainer, '', 'Toutes', '#999', null, () => { activeCategory = null; applyFilters(); });
+    addFilterBtn(catContainer, '', 'Toutes', '#999', null, () => { activeCategory = null; updateFilterToggle(); applyFilters(); });
     for (const cat of CATS) {
         const count = allEvents.filter(e => e.category === cat.key).length;
         if (!count) continue;
-        addFilterBtn(catContainer, cat.key, cat.label, cat.color, count, () => { activeCategory = cat.key; applyFilters(); });
+        addFilterBtn(catContainer, cat.key, cat.label, cat.color, count, () => { activeCategory = cat.key; updateFilterToggle(); applyFilters(); });
     }
     const scopeContainer = document.getElementById('scopeFilters');
-    addFilterBtn(scopeContainer, '', 'Toutes', null, null, () => { activeScope = null; applyFilters(); });
-    for (const s of SCOPES) addFilterBtn(scopeContainer, s.key, s.label, null, null, () => { activeScope = s.key; applyFilters(); });
+    addFilterBtn(scopeContainer, '', 'Toutes', null, null, () => { activeScope = null; updateFilterToggle(); applyFilters(); });
+    for (const s of SCOPES) addFilterBtn(scopeContainer, s.key, s.label, null, null, () => { activeScope = s.key; updateFilterToggle(); applyFilters(); });
 }
 
 function addFilterBtn(container, key, label, color, count, onClick) {
@@ -374,6 +375,28 @@ function renderEvents(events) {
     }
 
     grid.innerHTML = html.join('');
+}
+
+// ===================================================================
+// Offcanvas
+// ===================================================================
+function setupOffcanvas() {
+    const toggle = document.getElementById('filterToggle');
+    const overlay = document.getElementById('offcanvasOverlay');
+    const panel = document.getElementById('offcanvasPanel');
+    const close = document.getElementById('offcanvasClose');
+
+    const open = () => { overlay.classList.add('open'); panel.classList.add('open'); };
+    const shut = () => { overlay.classList.remove('open'); panel.classList.remove('open'); };
+
+    toggle.onclick = open;
+    overlay.onclick = shut;
+    close.onclick = shut;
+}
+
+function updateFilterToggle() {
+    const btn = document.getElementById('filterToggle');
+    btn.classList.toggle('has-filter', !!(activeCategory || activeScope));
 }
 
 // ===================================================================
