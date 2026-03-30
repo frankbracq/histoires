@@ -3,104 +3,1863 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>histoir.es — Administration</title>
+    <title>histoir.es — Admin</title>
     <meta name="robots" content="noindex, nofollow">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        /* Redirect to worker admin — this page serves as a proxy frame */
-        body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; }
-        .admin-frame { width: 100vw; height: 100vh; border: none; }
-        .auth-gate {
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; height: 100vh; gap: 1rem;
-            background: #f8f9fa;
-        }
-        .auth-gate h1 { font-size: 1.5rem; color: #333; }
-        .auth-gate form { display: flex; flex-direction: column; gap: 0.5rem; width: 300px; }
-        .auth-gate input {
-            padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;
-            font-size: 0.9rem;
-        }
-        .auth-gate button {
-            padding: 0.5rem; background: #8b4513; color: #fff; border: none;
-            border-radius: 4px; font-size: 0.9rem; cursor: pointer;
-        }
-        .auth-gate button:hover { background: #6d3710; }
-        .error { color: #dc3545; font-size: 0.85rem; display: none; }
+        body { background: #f8f9fa; }
+        .thumb-cell img { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; }
+        .thumb-cell .no-thumb { width: 50px; height: 50px; background: #e9ecef; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; color: #adb5bd; font-size: 1.2rem; }
+        .table td { vertical-align: middle; font-size: 0.88rem; }
+        .badge-source { font-size: 0.7rem; }
+        .stat-card { border-left: 4px solid; }
+        .stat-card .card-body { padding: 0.25rem 0.5rem !important; }
+        .stat-card .fs-4 { font-size: 1.1rem !important; }
+        .stat-card.total { border-color: #0d6efd; }
+        .stat-card.curated { border-color: #198754; }
+        .stat-card.sparql { border-color: #6f42c1; }
+        .stat-card.wikipedia { border-color: #e74c3c; }
+        .stat-card.images { border-color: #fd7e14; }
+        /* Imported source cards get inline border-color from renderStats() */
+        .stat-card.blocked { border-color: #6c757d; }
+        #importProgress { display: none; }
+        #importProgress.active { display: block; }
+        .import-drop-zone { border: 2px dashed #dee2e6; border-radius: 8px; padding: 1.5rem;
+            text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+        .import-drop-zone:hover, .import-drop-zone.dragover { border-color: #0d6efd; background: #f0f7ff; }
+        .auth-bar { background: #212529; color: white; padding: 0.5rem 1rem; position: sticky; top: 0; z-index: 20; }
+        .auth-bar input { max-width: 160px; font-size: 0.8rem; }
+        .auth-bar .badge { font-size: 0.75rem; }
+        .summary-cell { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .content-section { padding: 0.25rem 1rem 0; }
+        #eventsTable thead { position: sticky; top: 38px; z-index: 12; background: #f8f9fa;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        #eventsTable thead th, #eventsTable thead td { background: #f8f9fa; }
+        .thead-filters td { padding: 2px 4px !important; }
+        .thead-filters .form-select-sm, .thead-filters .form-control-sm {
+            font-size: 0.7rem; padding: 1px 4px; height: 24px; }
+        #refreshBtn.loading .spinner-border { display: inline-block !important; }
+        /* Century group headers */
+        .century-header td { background: #343a40 !important; color: #fff; font-weight: 600;
+            font-size: 0.9rem; cursor: pointer; user-select: none; padding: 6px 12px !important; }
+        .century-header:hover td { background: #495057 !important; }
+        .century-header .chevron { transition: transform 0.2s; display: inline-block; }
+        .century-header .chevron.expanded { transform: rotate(90deg); }
+        .century-header .badge { font-size: 0.7rem; vertical-align: middle; }
+        /* Toggle column */
+        .toggle-cell { width: 32px; text-align: center; padding: 2px 4px !important; }
+        .parent-toggle { cursor: pointer; color: #6c757d; font-size: 0.85rem; white-space: nowrap; }
+        .parent-toggle:hover { color: #0d6efd; }
+        .parent-toggle .chevron { transition: transform 0.2s; display: inline-block; }
+        .parent-toggle .chevron.expanded { transform: rotate(90deg); }
+        .child-count-badge { font-size: 0.6rem; background: #e9ecef; color: #495057;
+            border-radius: 10px; padding: 1px 5px; margin-left: 2px; vertical-align: middle; }
+        /* Child event rows — indented title, keep category background */
+        .child-row .title-cell { padding-left: 24px !important; }
+        .child-row .child-connector { color: #adb5bd; margin-right: 4px; font-family: monospace; }
+        .depth-2 .title-cell { padding-left: 44px !important; }
+        .depth-3 .title-cell { padding-left: 64px !important; }
+        .badge-politics { background-color: #1a5276; color: white; }
+tr.cat-politics td { background-color: #1a527618; }
+tr.parent-event.cat-politics td { background-color: #1a527638; font-weight: 500; }
+tr.root-parent.cat-politics td { background-color: #1a527660; font-weight: 600; }
+.badge-geopolitics { background-color: #c0392b; color: white; }
+tr.cat-geopolitics td { background-color: #c0392b18; }
+tr.parent-event.cat-geopolitics td { background-color: #c0392b38; font-weight: 500; }
+tr.root-parent.cat-geopolitics td { background-color: #c0392b60; font-weight: 600; }
+.badge-territory { background-color: #6c3483; color: white; }
+tr.cat-territory td { background-color: #6c348318; }
+tr.parent-event.cat-territory td { background-color: #6c348338; font-weight: 500; }
+tr.root-parent.cat-territory td { background-color: #6c348360; font-weight: 600; }
+.badge-colonisation { background-color: #8b4513; color: white; }
+tr.cat-colonisation td { background-color: #8b451318; }
+tr.parent-event.cat-colonisation td { background-color: #8b451338; font-weight: 500; }
+tr.root-parent.cat-colonisation td { background-color: #8b451360; font-weight: 600; }
+.badge-science { background-color: #2980b9; color: white; }
+tr.cat-science td { background-color: #2980b918; }
+tr.parent-event.cat-science td { background-color: #2980b938; font-weight: 500; }
+tr.root-parent.cat-science td { background-color: #2980b960; font-weight: 600; }
+.badge-culture { background-color: #8e44ad; color: white; }
+tr.cat-culture td { background-color: #8e44ad18; }
+tr.parent-event.cat-culture td { background-color: #8e44ad38; font-weight: 500; }
+tr.root-parent.cat-culture td { background-color: #8e44ad60; font-weight: 600; }
+.badge-economy { background-color: #27ae60; color: white; }
+tr.cat-economy td { background-color: #27ae6018; }
+tr.parent-event.cat-economy td { background-color: #27ae6038; font-weight: 500; }
+tr.root-parent.cat-economy td { background-color: #27ae6060; font-weight: 600; }
+.badge-health { background-color: #e67e22; color: white; }
+tr.cat-health td { background-color: #e67e2218; }
+tr.parent-event.cat-health td { background-color: #e67e2238; font-weight: 500; }
+tr.root-parent.cat-health td { background-color: #e67e2260; font-weight: 600; }
+.badge-society { background-color: #16a085; color: white; }
+tr.cat-society td { background-color: #16a08518; }
+tr.parent-event.cat-society td { background-color: #16a08538; font-weight: 500; }
+tr.root-parent.cat-society td { background-color: #16a08560; font-weight: 600; }
+.badge-technology { background-color: #2dd4bf; color: white; }
+tr.cat-technology td { background-color: #2dd4bf18; }
+tr.parent-event.cat-technology td { background-color: #2dd4bf38; font-weight: 500; }
+tr.root-parent.cat-technology td { background-color: #2dd4bf60; font-weight: 600; }
     </style>
 </head>
 <body>
-    <div class="auth-gate" id="authGate">
-        <h1>histoir.es — Admin</h1>
-        <form onsubmit="authenticate(event)">
-            <input type="text" id="partnerId" placeholder="Partner ID" required>
-            <input type="password" id="partnerSecret" placeholder="Partner Secret" required>
-            <button type="submit">Connexion</button>
-            <span class="error" id="authError">Identifiants incorrects</span>
-        </form>
+<!-- Auth bar -->
+<div class="auth-bar d-flex align-items-center gap-2 flex-wrap">
+    <span class="fw-bold me-2"><i class="bi bi-clock-history me-1"></i>Historical Events</span>
+    <button class="btn btn-primary btn-sm admin-only" id="addBtn" onclick="openAddModal()" disabled>
+        <i class="bi bi-plus-lg me-1"></i>Ajouter
+    </button>
+    <button class="btn btn-outline-light btn-sm admin-only" id="refreshBtn" onclick="doRefresh()" disabled>
+        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+        <i class="bi bi-arrow-repeat me-1"></i>Rafraîchir
+    </button>
+    <button class="btn btn-info btn-sm admin-only" id="importBtn" onclick="openImportModal()" disabled>
+        <i class="bi bi-file-earmark-arrow-up me-1"></i>Import
+    </button>
+    <button class="btn btn-warning btn-sm admin-only" id="migrateBtn" onclick="doMigrate()" disabled title="Migrer category:war → nouvelle taxonomie">
+        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+        <i class="bi bi-arrow-left-right me-1"></i>Migrate
+    </button>
+    <button class="btn btn-outline-light btn-sm" onclick="exportJSON()" title="Export JSON">
+        <i class="bi bi-filetype-json"></i>
+    </button>
+    <button class="btn btn-outline-light btn-sm" onclick="exportCSV()" title="Export CSV">
+        <i class="bi bi-filetype-csv"></i>
+    </button>
+    <span class="badge bg-secondary" id="countBadge">0</span>
+    <span class="text-light small ms-auto me-2" id="lastRefresh"></span>
+    <input type="text" id="partnerId" class="form-control form-control-sm bg-dark text-light border-secondary"
+        placeholder="Partner ID" autocomplete="off">
+    <input type="password" id="partnerToken" class="form-control form-control-sm bg-dark text-light border-secondary"
+        placeholder="Secret" autocomplete="off">
+    <button class="btn btn-sm btn-outline-light" onclick="saveAuth()">
+        <i class="bi bi-key"></i>
+    </button>
+    <span id="authStatus" class="badge bg-secondary">Non connecté</span>
+</div>
+
+<div class="content-section">
+    <!-- Stats row -->
+    <div class="row g-2 mb-2" id="statsRow">
+        <div class="col-6 col-lg">
+            <div class="card stat-card total">
+                <div class="card-body py-2 px-3">
+                    <div class="text-muted small">Total</div>
+                    <div class="fs-4 fw-bold" id="statTotal">—</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card stat-card curated">
+                <div class="card-body py-2 px-3">
+                    <div class="text-muted small">Corrigés</div>
+                    <div class="fs-4 fw-bold" id="statCurated">—</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card stat-card masterlist">
+                <div class="card-body py-2 px-3">
+                    <div class="text-muted small">Master list</div>
+                    <div class="fs-4 fw-bold" id="statMasterlist">—</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card stat-card resolved">
+                <div class="card-body py-2 px-3">
+                    <div class="text-muted small">Résolus Wiki</div>
+                    <div class="fs-4 fw-bold" id="statResolved">—</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card stat-card images">
+                <div class="card-body py-2 px-3">
+                    <div class="text-muted small">Avec image</div>
+                    <div class="fs-4 fw-bold" id="statImages">—</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg" id="importedStatsContainer">
+            <!-- Dynamic imported source stats rendered by renderStats() -->
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card stat-card blocked" role="button" onclick="toggleBlockedView()" title="Voir/masquer les événements bloqués">
+                <div class="card-body py-2 px-3">
+                    <div class="text-muted small"><i class="bi bi-eye-slash me-1"></i>Bloqués</div>
+                    <div class="fs-4 fw-bold" id="statBlocked">—</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card stat-card orphans" role="button" onclick="toggleOrphansView()" title="Voir/masquer les événements orphelins" style="border-color:#fd7e14">
+                <div class="card-body py-2 px-3">
+                    <div class="text-muted small"><i class="bi bi-question-circle me-1"></i>Orphelins</div>
+                    <div class="fs-4 fw-bold" id="statOrphans">—</div>
+                </div>
+            </div>
+        </div>
     </div>
-    <iframe class="admin-frame" id="adminFrame" style="display:none"></iframe>
 
-    <script>
-    const API_BASE = 'https://historical-events.genealogie.app';
+    <!-- Import progress -->
+    <div id="importProgress" class="alert alert-info py-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            <span id="importMessage">Import en cours...</span>
+        </div>
+        <div class="progress mt-2" style="height: 4px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" id="importBar" style="width: 0%"></div>
+        </div>
+    </div>
 
-    async function authenticate(e) {
-        e.preventDefault();
-        const pid = document.getElementById('partnerId').value.trim();
-        const secret = document.getElementById('partnerSecret').value.trim();
+    </div><!-- end content-section -->
 
+    <!-- Events table -->
+    <div class="px-4">
+        <table class="table table-hover table-sm" id="eventsTable">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:50px"></th>
+                    <th style="width:32px"></th>
+                    <th style="width:55px">Année</th>
+                    <th style="width:85px">Date</th>
+                    <th style="width:85px">Fin</th>
+                    <th>Titre</th>
+                    <th style="width:90px">Catégorie</th>
+                    <th style="width:70px">Portée</th>
+                    <th style="width:70px">Source</th>
+                    <th style="width:80px">Actions</th>
+                </tr>
+                <tr class="thead-filters">
+                    <td></td>
+                    <td></td>
+                    <td>
+                        <select class="form-select form-select-sm" id="centuryFilter" onchange="applyFilters()">
+                            <option value="">—</option>
+                        </select>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td>
+                        <input type="search" class="form-control form-control-sm" id="searchFilter"
+                            placeholder="Rechercher..." oninput="applyFilters()">
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" id="catFilter" onchange="applyFilters()">
+                            <option value="">—</option>
+                            <option value="politics">Politique</option><option value="geopolitics">Relations internationales</option><option value="territory">Extension territoriale</option><option value="colonisation">Colonisation</option><option value="science">Sciences</option><option value="culture">Culture</option><option value="economy">Économie</option><option value="health">Santé</option><option value="society">Société</option><option value="technology">Technologie</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" id="scopeFilter" onchange="applyFilters()">
+                            <option value="">—</option>
+                            <option value="regions">Régions</option><option value="france">France</option><option value="europe">Europe</option><option value="mondial">Mondial</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" id="sourceFilter" onchange="applyFilters()">
+                            <option value="">—</option>
+                            <option value="masterlist">Master</option>
+                            <option value="curated">Corrigé</option>
+                            <!-- Imported sources populated dynamically -->
+                        </select>
+                    </td>
+                    <td></td>
+                </tr>
+            </thead>
+            <tbody id="eventsBody"></tbody>
+        </table>
+    </div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Ajouter un événement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="promoteTargetPanel" class="d-none mb-3">
+                    <label class="form-label fw-bold"><i class="bi bi-link-45deg me-1"></i>Rattacher à un événement existant ?</label>
+                    <select class="form-select form-select-sm" id="promoteTarget" onchange="onPromoteTargetChange()">
+                        <option value="">— Créer un nouvel événement —</option>
+                    </select>
+                </div>
+                <form id="eventForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Titre *</label>
+                            <input type="text" class="form-control form-control-sm" id="fTitle" required>
+                        </div>
+                        <input type="hidden" id="fYear">
+                        <div class="col-md-3">
+                            <label class="form-label">Date début *</label>
+                            <input type="text" class="form-control form-control-sm" id="fDate" placeholder="14/07/1789 ou 07/1789 ou 1789" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date fin</label>
+                            <input type="text" class="form-control form-control-sm" id="fEndDate" placeholder="27/07/1789">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">ID</label>
+                            <input type="text" class="form-control form-control-sm" id="fId" placeholder="Auto-généré">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Catégorie *</label>
+                            <select class="form-select form-select-sm" id="fCategory" required>
+                                <option value="politics">Politique</option><option value="geopolitics">Relations internationales</option><option value="territory">Extension territoriale</option><option value="colonisation">Colonisation</option><option value="science">Sciences</option><option value="culture">Culture</option><option value="economy">Économie</option><option value="health">Santé</option><option value="society">Société</option><option value="technology">Technologie</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Portée *</label>
+                            <select class="form-select form-select-sm" id="fScope" required>
+                                <option value="regions">Régions</option><option value="france">France</option><option value="europe">Europe</option><option value="mondial">Mondial</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sous-type</label>
+                            <select class="form-select form-select-sm" id="fSubtype">
+                                <option value="">—</option>
+                                <option value="war">Guerre</option><option value="reform">Réforme</option><option value="crisis">Crise / Révolte</option><option value="election">Élection</option><option value="institution">Institution</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Résumé (affiché dans la timeline)</label>
+                            <textarea class="form-control form-control-sm" id="fSummary" rows="2"></textarea>
+                            <div id="summarySourcesPanel" class="mt-1 d-none">
+                                <div id="senecalPreview" class="d-none d-flex align-items-start gap-2 mt-1 p-2 border rounded bg-light" style="max-height:100px;overflow-y:auto">
+                                    <button type="button" class="btn btn-warning btn-sm flex-shrink-0 py-0 px-1" onclick="useSummarySource('senecal')" title="Copier dans le résumé affiché" style="font-size:.7em">
+                                        <i class="bi bi-arrow-up-circle"></i> Senecal
+                                    </button>
+                                    <small class="text-muted" id="senecalText"></small>
+                                </div>
+                                <div id="wikipediaPreview" class="d-none d-flex align-items-start gap-2 mt-1 p-2 border rounded bg-light" style="max-height:100px;overflow-y:auto">
+                                    <button type="button" class="btn btn-secondary btn-sm flex-shrink-0 py-0 px-1" onclick="useSummarySource('wikipedia')" title="Copier dans le résumé affiché" style="font-size:.7em">
+                                        <i class="bi bi-arrow-up-circle"></i> Wikipedia
+                                    </button>
+                                    <small class="text-muted" id="wikipediaText"></small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Article Wikipedia</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <div id="wikiPreview" class="flex-shrink-0 d-none">
+                                    <div id="wikiThumbPreview"></div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" id="fWikiTitle" placeholder="Prise_de_la_Bastille">
+                                        <button class="btn btn-outline-secondary" type="button" id="btnWikiOpen" title="Ouvrir l'article" onclick="openWikiLink()" disabled>
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" type="button" id="btnWikiFetch" title="Récupérer image" onclick="fetchWikiData()" disabled>
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" type="button" id="btnWikiClear" title="Supprimer le lien Wikipedia" onclick="clearWikiData()">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                    <div id="wikiFetchStatus" class="mt-1 d-none">
+                                        <small class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Recherche Wikipedia...</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="fImageUrl">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Événement parent</label>
+                            <select class="form-select form-select-sm" id="fParentId">
+                                <option value="">Aucun</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="fIsParent">
+                                <label class="form-check-label" for="fIsParent">Événement englobant (peut être parent d'autres événements)</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveEvent()">
+                    <i class="bi bi-check-lg me-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-file-earmark-arrow-up me-2"></i>Importer un document TXT</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="import-drop-zone" id="dropZone">
+                    <i class="bi bi-cloud-arrow-up fs-1 text-muted d-block mb-2"></i>
+                    <p class="mb-1">Glissez un fichier .txt ici ou cliquez pour sélectionner</p>
+                    <p class="text-muted small mb-0">Format : liste chronologique d'événements (OCR)</p>
+                    <input type="file" id="importFile" accept=".txt" class="d-none">
+                </div>
+                <div id="fileInfo" class="mt-2 d-none">
+                    <span class="badge bg-light text-dark" id="fileName"></span>
+                    <span class="text-muted small ms-2" id="fileLines"></span>
+                    <div class="mt-2">
+                        <label class="form-label small mb-1">Taille des lots (lignes par envoi)</label>
+                        <select class="form-select form-select-sm" id="chunkSize" style="max-width:200px;">
+                            <option value="0">Fichier entier</option>
+                            <option value="100">100 lignes</option>
+                            <option value="200" selected>200 lignes</option>
+                            <option value="400">400 lignes</option>
+                        </select>
+                        <div class="text-muted small mt-1" id="chunkInfo"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-info btn-sm" id="startImportBtn" onclick="startImport()" disabled>
+                    <i class="bi bi-play-fill me-1"></i>Lancer l'import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast" role="alert">
+        <div class="toast-body d-flex align-items-center gap-2" id="toastBody"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const BASE = "https://historical-events.genealogie.app";
+const CAT_LABELS = {'politics':'Politique','geopolitics':'Relations internationales','territory':'Extension territoriale','colonisation':'Colonisation','science':'Sciences','culture':'Culture','economy':'Économie','health':'Santé','society':'Société','technology':'Technologie'};
+const SCOPE_LABELS = {'regions':'Régions','france':'France','europe':'Europe','mondial':'Mondial'};
+const SUBTYPE_MAP = {'war':{label:'Guerre',color:'#8b0000'},'reform':{label:'Réforme',color:'#2980b9'},'crisis':{label:'Crise / Révolte',color:'#e74c3c'},'election':{label:'Élection',color:'#27ae60'},'institution':{label:'Institution',color:'#8e44ad'}};
+let allEvents = [];
+let blockedEvents = [];
+let orphanEvents = {}; // { source: [{year, scope, text, ...}] }
+let showingBlocked = false;
+let showingOrphans = false;
+let editingId = null;
+let modal = null;
+let importModal = null;
+let importFileContent = null;
+let importPollingTimer = null;
+const expandedCenturies = new Set();
+const expandedParents = new Set();
+
+// --- Init ---
+document.addEventListener('DOMContentLoaded', () => {
+    modal = new bootstrap.Modal(document.getElementById('eventModal'));
+    importModal = new bootstrap.Modal(document.getElementById('importModal'));
+    setupDropZone();
+    // Set thead sticky top to match auth-bar height
+    const authBarH = document.querySelector('.auth-bar').offsetHeight;
+    document.querySelector('#eventsTable thead').style.top = authBarH + 'px';
+    // Update wiki buttons when title input changes
+    document.getElementById('fWikiTitle').addEventListener('input', updateWikiButtons);
+    // Auto-calculate year from date fields (DD/MM/YYYY, MM/YYYY or YYYY)
+    const extractYear = (v) => { const m = v.match(/(\d{4})$/); return m ? m[1] : null; };
+    const autoYear = () => {
+        const y = extractYear(document.getElementById('fDate').value)
+            || extractYear(document.getElementById('fEndDate').value);
+        if (y) document.getElementById('fYear').value = y;
+    };
+    document.getElementById('fDate').addEventListener('input', autoYear);
+    document.getElementById('fEndDate').addEventListener('input', autoYear);
+    // Restore auth from sessionStorage
+    const pid = sessionStorage.getItem('partnerId');
+    const pt = sessionStorage.getItem('partnerToken');
+    if (pid) document.getElementById('partnerId').value = pid;
+    if (pt) document.getElementById('partnerToken').value = pt;
+    if (pid && pt) updateAuthUI(true);
+    loadData();
+});
+
+// --- Auth ---
+function saveAuth() {
+    const pid = document.getElementById('partnerId').value.trim();
+    const pt = document.getElementById('partnerToken').value.trim();
+    if (pid && pt) {
+        sessionStorage.setItem('partnerId', pid);
+        sessionStorage.setItem('partnerToken', pt);
+        updateAuthUI(true);
+        showToast('Credentials enregistrés', 'success');
+    } else {
+        sessionStorage.removeItem('partnerId');
+        sessionStorage.removeItem('partnerToken');
+        updateAuthUI(false);
+    }
+}
+
+function updateAuthUI(authed) {
+    const status = document.getElementById('authStatus');
+    const btns = document.querySelectorAll('.admin-only');
+    if (authed) {
+        status.textContent = 'Connecté';
+        status.className = 'badge bg-success';
+        btns.forEach(b => b.disabled = false);
+    } else {
+        status.textContent = 'Non connecté';
+        status.className = 'badge bg-secondary';
+        btns.forEach(b => b.disabled = true);
+    }
+}
+
+async function computeHmacToken(partnerId, secret) {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        'raw', encoder.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+    const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(partnerId + '-' + dateStr));
+    return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function getAuthHeaders() {
+    const pid = sessionStorage.getItem('partnerId') || '';
+    const secret = sessionStorage.getItem('partnerToken') || '';
+    if (!pid || !secret) return { 'X-Partner-ID': '', 'X-Partner-Token': '' };
+    const token = await computeHmacToken(pid, secret);
+    return { 'X-Partner-ID': pid, 'X-Partner-Token': token };
+}
+
+// --- Data loading ---
+async function loadData() {
+    try {
+        const nocache = { cache: 'no-store' };
+        const [eventsRes, metaRes] = await Promise.all([
+            fetch(BASE + '/events', nocache),
+            fetch(BASE + '/meta', nocache)
+        ]);
+        const eventsData = await eventsRes.json();
+        allEvents = eventsData.events || [];
+        populateCenturyFilter(allEvents);
+        const meta = await metaRes.json();
+
+        // Load blocked + orphan events
+        if (isAuthed()) {
+            try {
+                const blockedRes = await fetch(BASE + '/blocked', nocache);
+                blockedEvents = await blockedRes.json();
+            } catch { blockedEvents = []; }
+        }
         try {
-            // Generate HMAC token
-            const encoder = new TextEncoder();
-            const key = await crypto.subtle.importKey(
-                'raw', encoder.encode(secret),
-                { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-            );
-            const date = new Date().toISOString().split('T')[0];
-            const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(pid + '-' + date));
-            const token = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const orphanRes = await fetch(BASE + '/unmatched', nocache);
+            orphanEvents = await orphanRes.json();
+        } catch { orphanEvents = {}; }
 
-            // Test auth
-            const res = await fetch(`${API_BASE}/meta`, {
-                headers: { 'X-Partner-ID': pid, 'X-Partner-Token': token }
-            });
+        const orphanTotal = Object.values(orphanEvents).reduce((s, arr) => s + arr.length, 0);
+        document.getElementById('statOrphans').textContent = orphanTotal;
 
-            if (res.ok) {
-                // Store credentials
-                sessionStorage.setItem('histoires_pid', pid);
-                sessionStorage.setItem('histoires_secret', secret);
+        populateSourceFilter(allEvents);
+        renderStats(meta);
+        if (showingOrphans) {
+            renderOrphansTable();
+        } else if (showingBlocked) {
+            renderBlockedTable();
+        } else {
+            applyFilters();
+        }
+    } catch (err) {
+        showToast('Erreur de chargement: ' + err.message, 'danger');
+    }
+}
 
-                // Load admin iframe
-                document.getElementById('authGate').style.display = 'none';
-                const frame = document.getElementById('adminFrame');
-                frame.src = `${API_BASE}/admin`;
-                frame.style.display = 'block';
+function renderStats(meta) {
+    document.getElementById('statTotal').textContent = meta.totalCount || 0;
+    document.getElementById('statCurated').textContent = meta.curatedCount || 0;
+    document.getElementById('statMasterlist').textContent = meta.masterlistCount || 0;
+    document.getElementById('statResolved').textContent = meta.resolvedCount || 0;
+    document.getElementById('statImages').textContent = meta.withImages || 0;
+    document.getElementById('statBlocked').textContent = meta.blockedCount || 0;
 
-                // Inject credentials into iframe after load
-                frame.onload = () => {
-                    try {
-                        frame.contentWindow.postMessage({
-                            type: 'histoires-auth',
-                            partnerId: pid,
-                            partnerSecret: secret
-                        }, '*');
-                    } catch {}
-                };
-            } else {
-                document.getElementById('authError').style.display = 'block';
+    // Dynamic imported source stats
+    const container = document.getElementById('importedStatsContainer');
+    const counts = meta.importedCounts || {};
+    // Backward compat: old meta format had volkmannCount
+    if (!Object.keys(counts).length && meta.volkmannCount) {
+        counts.volkmann = meta.volkmannCount;
+    }
+    const entries = Object.entries(counts);
+    if (entries.length > 0) {
+        container.innerHTML = entries.map(([name, count]) =>
+            '<div class="card stat-card mb-1" style="border-color:#0dcaf0">' +
+            '<div class="card-body py-2 px-3">' +
+            '<div class="text-muted small"><i class="bi bi-file-earmark-arrow-up me-1"></i>' + name.charAt(0).toUpperCase() + name.slice(1) + '</div>' +
+            '<div class="fs-4 fw-bold">' + count + '</div>' +
+            '</div></div>'
+        ).join('');
+    } else {
+        container.innerHTML = '';
+    }
+
+    if (meta.lastRefresh) {
+        const d = new Date(meta.lastRefresh);
+        document.getElementById('lastRefresh').textContent =
+            'Dernière MAJ: ' + d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR');
+    }
+}
+
+// --- Century filter ---
+function populateCenturyFilter(events) {
+    const centuries = new Set();
+    for (const e of events) {
+        centuries.add(Math.floor((e.year - 1) / 100) + 1);
+    }
+    const sorted = [...centuries].sort((a, b) => a - b);
+    const sel = document.getElementById('centuryFilter');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Tous siècles</option>' +
+        sorted.map(c => {
+            const label = c <= 20
+                ? ['', 'Ier', 'IIe', 'IIIe', 'IVe', 'Ve', 'VIe', 'VIIe', 'VIIIe', 'IXe', 'Xe',
+                   'XIe', 'XIIe', 'XIIIe', 'XIVe', 'XVe', 'XVIe', 'XVIIe', 'XVIIIe', 'XIXe', 'XXe'][c]
+                : c + 'e';
+            return '<option value="' + c + '">' + label + ' siècle</option>';
+        }).join('');
+    sel.value = current;
+}
+
+// --- Source filter (dynamic) ---
+function populateSourceFilter(events) {
+    const sources = new Set();
+    for (const e of events) {
+        if (e.source) sources.add(e.source);
+    }
+    const sel = document.getElementById('sourceFilter');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">—</option>' +
+        '<option value="masterlist">Master</option>' +
+        '<option value="curated">Corrigé</option>' +
+        [...sources].filter(s => s !== 'masterlist' && s !== 'curated').sort()
+            .map(s => '<option value="' + s + '">' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>')
+            .join('');
+    sel.value = current;
+}
+
+// --- Filters ---
+function applyFilters() {
+    const search = document.getElementById('searchFilter').value.toLowerCase();
+    const cat = document.getElementById('catFilter').value;
+    const scope = document.getElementById('scopeFilter').value;
+    const source = document.getElementById('sourceFilter').value;
+    const century = document.getElementById('centuryFilter').value;
+
+    const filtered = allEvents.filter(e => {
+        if (search && !(
+            e.title.toLowerCase().includes(search) ||
+            (e.summary || '').toLowerCase().includes(search) ||
+            e.id.toLowerCase().includes(search)
+        )) return false;
+        if (cat && e.category !== cat) return false;
+        if (scope && e.scope !== scope) return false;
+        if (source && e.source !== source) return false;
+        if (century && Math.floor((e.year - 1) / 100) + 1 !== parseInt(century)) return false;
+        return true;
+    });
+
+    // Sort chronologically: by year, then by date (DD/MM/YYYY → YYYYMMDD for correct ordering)
+    function toSortKey(e) {
+        if (!e.date) return e.year * 10000;
+        const parts = e.date.split('/');
+        if (parts.length === 3) return parseInt(parts[2]) * 10000 + parseInt(parts[1]) * 100 + parseInt(parts[0]);
+        if (parts.length === 2) return e.year * 10000 + parseInt(parts[1]) * 100 + parseInt(parts[0]);
+        return e.year * 10000;
+    }
+    filtered.sort((a, b) => toSortKey(a) - toSortKey(b));
+
+    document.getElementById('countBadge').textContent = filtered.length + ' / ' + allEvents.length;
+    renderTable(filtered);
+}
+
+// --- Century labels ---
+const CENTURY_LABELS = ['', 'Ier', 'IIe', 'IIIe', 'IVe', 'Ve', 'VIe', 'VIIe', 'VIIIe', 'IXe', 'Xe',
+    'XIe', 'XIIe', 'XIIIe', 'XIVe', 'XVe', 'XVIe', 'XVIIe', 'XVIIIe', 'XIXe', 'XXe', 'XXIe'];
+
+function centuryLabel(c) {
+    return (CENTURY_LABELS[c] || c + 'e') + ' siècle';
+}
+
+function getCentury(year) {
+    return Math.floor((year - 1) / 100) + 1;
+}
+
+// --- Child count map (avoids mutating event objects) ---
+let childCountMap = new Map();
+let _childrenOf = {};
+
+// Check if a parent has at least one child that is itself a parent
+function hasGrandchildren(parentId) {
+    const children = _childrenOf[parentId];
+    if (!children) return false;
+    return children.some(c => c.isParent && (childCountMap.get(c.id) || 0) > 0);
+}
+
+// --- Table rendering ---
+function renderEventRow(e, depth) {
+    const safeId = escAttr(e.id);
+    const isChild = depth > 0;
+    const thumb = e.imageUrl
+        ? '<img src="' + escHtml(e.imageUrl) + '" alt="" loading="lazy">'
+        : '<div class="no-thumb"><i class="bi bi-image"></i></div>';
+    const wikiUrl = (e.wikiTitle && e.summary)
+        ? 'https://fr.wikipedia.org/wiki/' + encodeURIComponent(e.wikiTitle)
+        : null;
+    const titleText = wikiUrl
+        ? '<a href="' + wikiUrl + '" target="_blank" rel="noopener">' + escHtml(e.title) + '</a>'
+        : escHtml(e.title);
+    const titlePrefix = isChild ? '<span class="child-connector">└</span>' : '';
+    const catBadge = '<span class="badge badge-' + e.category + '">' + (CAT_LABELS[e.category] || e.category) + '</span>';
+    const subtypeInfo = e.subtype ? SUBTYPE_MAP[e.subtype] : null;
+    const subtypeBadge = subtypeInfo
+        ? ' <span class="badge" style="background-color:' + subtypeInfo.color + ';color:#fff;font-size:.65em">' + subtypeInfo.label + '</span>'
+        : '';
+    const scopeBadge = '<span class="badge bg-light text-dark">' + (SCOPE_LABELS[e.scope] || e.scope) + '</span>';
+    const sourceBadge = e.source === 'curated'
+        ? '<span class="badge bg-success badge-source">Corrigé</span>'
+        : e.source === 'masterlist'
+        ? '<span class="badge bg-primary badge-source">Master</span>'
+        : '<span class="badge bg-info badge-source">' + (e.source.charAt(0).toUpperCase() + e.source.slice(1)) + '</span>';
+    const dis = isAuthed() ? '' : 'disabled';
+    const isCurated = e.source === 'curated';
+    const deleteIcon = isCurated ? 'bi-trash' : 'bi-eye-slash';
+    const deleteTitle = isCurated ? 'Supprimer' : 'Bloquer';
+    const deleteBtnClass = isCurated ? 'btn-outline-danger' : 'btn-outline-secondary';
+
+    // Toggle cell: chevron + child count for parent events
+    const cc = childCountMap.get(e.id) || 0;
+    let toggleHtml = '';
+    if (e.isParent && cc > 0) {
+        const exp = expandedParents.has(e.id) ? ' expanded' : '';
+        toggleHtml = '<span class="parent-toggle" data-parent-id="' + safeId + '">' +
+            '<i class="bi bi-chevron-right chevron' + exp + '"></i>' +
+            '<span class="child-count-badge">' + cc + '</span></span>';
+    }
+
+    const depthClass = depth > 1 ? ' depth-' + depth : '';
+    const isParentWithChildren = e.isParent && cc > 0;
+    const isRootParent = isParentWithChildren && depth === 0 && hasGrandchildren(e.id);
+    const parentClass = isRootParent ? ' root-parent' : (isParentWithChildren ? ' parent-event' : '');
+    const rowClass = (isChild ? 'child-row ' : '') + 'cat-' + e.category + depthClass + parentClass;
+    const parentAttr = isChild ? ' data-parent="' + escAttr(e.parentId) + '"' : '';
+    const centuryAttr = ' data-century="' + getCentury(e.year) + '"';
+
+    return '<tr class="' + rowClass + '"' + parentAttr + centuryAttr + '>' +
+        '<td class="thumb-cell">' + thumb + '</td>' +
+        '<td class="toggle-cell">' + toggleHtml + '</td>' +
+        '<td><strong>' + e.year + '</strong></td>' +
+        '<td class="text-muted">' + (e.date || '') + '</td>' +
+        '<td class="text-muted">' + (e.endDate || '') + '</td>' +
+        '<td class="title-cell">' + titlePrefix + titleText +
+            '<div class="summary-cell text-muted small">' + escHtml(e.summary || '') + '</div>' +
+            (e.summarySenecal || e.summaryWikipedia
+                ? '<div class="summary-sources" style="margin-top:2px">' +
+                    (e.summarySenecal ? '<span class="badge bg-warning text-dark" style="font-size:.55em;cursor:pointer" title="' + escAttr(e.summarySenecal) + '">Senecal</span> ' : '') +
+                    (e.summaryWikipedia ? '<span class="badge bg-secondary" style="font-size:.55em;cursor:pointer" title="' + escAttr(e.summaryWikipedia) + '">Wikipedia</span> ' : '') +
+                  '</div>'
+                : '') +
+          '</td>' +
+        '<td>' + catBadge + subtypeBadge + '</td>' +
+        '<td>' + scopeBadge + '</td>' +
+        '<td>' + sourceBadge + '</td>' +
+        '<td>' +
+            '<button class="btn btn-outline-primary btn-sm me-1 admin-only btn-edit" data-id="' + safeId + '" ' +
+                dis + ' title="Éditer"><i class="bi bi-pencil"></i></button>' +
+            '<button class="btn ' + deleteBtnClass + ' btn-sm admin-only btn-delete" data-id="' + safeId + '" ' +
+                dis + ' title="' + deleteTitle + '"><i class="bi ' + deleteIcon + '"></i></button>' +
+        '</td></tr>';
+}
+
+function renderTable(events) {
+    const tbody = document.getElementById('eventsBody');
+    if (events.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Aucun événement trouvé</td></tr>';
+        return;
+    }
+
+    // Detect if any filter is active → auto-expand all
+    const hasFilter = document.getElementById('searchFilter').value.trim() ||
+        document.getElementById('catFilter').value ||
+        document.getElementById('scopeFilter').value ||
+        document.getElementById('sourceFilter').value ||
+        document.getElementById('centuryFilter').value;
+
+    // Build child lookup: parentId → [children] (single pass)
+    const childrenOf = {};
+    const childIds = new Set();
+    childCountMap = new Map();
+    _childrenOf = childrenOf;
+    for (const e of events) {
+        if (e.parentId) {
+            childIds.add(e.id);
+            if (!childrenOf[e.parentId]) childrenOf[e.parentId] = [];
+            childrenOf[e.parentId].push(e);
+        }
+    }
+    // Compute child counts in separate map (no mutation)
+    for (const pid in childrenOf) {
+        childCountMap.set(pid, childrenOf[pid].length);
+    }
+
+    // Recursive function: collects rows into shared array (avoids concat overhead)
+    // Max depth = 3 (parent → child → grandchild → great-grandchild)
+    const MAX_DEPTH = 3;
+    function renderEventTree(rows, e, depth, visible) {
+        const rowHtml = renderEventRow(e, depth);
+        rows.push(visible ? rowHtml : rowHtml.replace('<tr', '<tr style="display:none"'));
+        if (childrenOf[e.id] && depth < MAX_DEPTH) {
+            const childVisible = visible && (hasFilter || expandedParents.has(e.id));
+            for (const child of childrenOf[e.id]) {
+                renderEventTree(rows, child, depth + 1, childVisible);
             }
-        } catch (err) {
-            document.getElementById('authError').textContent = err.message;
-            document.getElementById('authError').style.display = 'block';
         }
     }
 
-    // Auto-fill from session
-    const savedPid = sessionStorage.getItem('histoires_pid');
-    const savedSecret = sessionStorage.getItem('histoires_secret');
-    if (savedPid && savedSecret) {
-        document.getElementById('partnerId').value = savedPid;
-        document.getElementById('partnerSecret').value = savedSecret;
+    // Group top-level events by century (single pass, exclude children)
+    const centuryGroups = {};
+    for (const e of events) {
+        if (childIds.has(e.id)) continue;
+        const c = getCentury(e.year);
+        if (!centuryGroups[c]) centuryGroups[c] = [];
+        centuryGroups[c].push(e);
     }
-    </script>
-</body>
+
+    const centuries = Object.keys(centuryGroups).map(Number).sort((a, b) => a - b);
+    const rows = [];
+
+    for (const c of centuries) {
+        const groupEvents = centuryGroups[c];
+        const isExpanded = hasFilter || expandedCenturies.has(c);
+        const chevronClass = isExpanded ? ' expanded' : '';
+
+        rows.push('<tr class="century-header" data-century-toggle="' + c + '">' +
+            '<td colspan="10">' +
+                '<i class="bi bi-chevron-right chevron' + chevronClass + '"></i> ' +
+                centuryLabel(c) +
+                ' <span class="badge bg-light text-dark">' + groupEvents.length + '</span>' +
+            '</td></tr>');
+
+        for (const e of groupEvents) {
+            renderEventTree(rows, e, 0, isExpanded);
+        }
+    }
+
+    tbody.innerHTML = rows.join('');
+
+    // Single event delegation on tbody (replaces N individual listeners)
+    tbody.onclick = function(ev) {
+        const target = ev.target;
+        // Century header toggle
+        const header = target.closest('.century-header');
+        if (header) { toggleCentury(parseInt(header.dataset.centuryToggle)); return; }
+        // Parent toggle
+        const toggle = target.closest('.parent-toggle');
+        if (toggle) { ev.stopPropagation(); toggleParent(toggle.dataset.parentId); return; }
+        // Edit button
+        const editBtn = target.closest('.btn-edit');
+        if (editBtn) { openEditModal(editBtn.dataset.id); return; }
+        // Delete button
+        const deleteBtn = target.closest('.btn-delete');
+        if (deleteBtn) { deleteEvent(deleteBtn.dataset.id); return; }
+    };
+}
+
+function toggleCentury(c) {
+    const tbody = document.getElementById('eventsBody');
+    const header = tbody.querySelector('[data-century-toggle="' + c + '"]');
+    if (!header) return;
+
+    const isExpanded = expandedCenturies.has(c);
+    if (isExpanded) {
+        expandedCenturies.delete(c);
+    } else {
+        expandedCenturies.add(c);
+    }
+    const nowExpanded = !isExpanded;
+
+    // Toggle chevron
+    const chevron = header.querySelector('.chevron');
+    if (chevron) chevron.classList.toggle('expanded', nowExpanded);
+
+    // Toggle all rows until next century header
+    let row = header.nextElementSibling;
+    while (row && !row.classList.contains('century-header')) {
+        if (row.classList.contains('child-row')) {
+            // Child rows: only show if century expanded AND all ancestor parents expanded
+            const parentId = row.dataset.parent;
+            row.style.display = (nowExpanded && expandedParents.has(parentId)) ? '' : 'none';
+        } else {
+            row.style.display = nowExpanded ? '' : 'none';
+        }
+        row = row.nextElementSibling;
+    }
+}
+
+function toggleParent(parentId) {
+    const tbody = document.getElementById('eventsBody');
+    const isExpanded = expandedParents.has(parentId);
+    if (isExpanded) {
+        expandedParents.delete(parentId);
+    } else {
+        expandedParents.add(parentId);
+    }
+    const nowExpanded = !isExpanded;
+
+    // Toggle chevron on parent toggle
+    const toggle = tbody.querySelector('[data-parent-id="' + parentId + '"]');
+    if (toggle) {
+        const chevron = toggle.querySelector('.chevron');
+        if (chevron) chevron.classList.toggle('expanded', nowExpanded);
+    }
+
+    // Toggle direct child rows + recursively hide descendants
+    function setChildrenVisibility(pid, show) {
+        tbody.querySelectorAll('.child-row[data-parent="' + pid + '"]').forEach(row => {
+            row.style.display = show ? '' : 'none';
+            // Find if this child is also a parent toggle
+            const childToggle = row.querySelector('.parent-toggle');
+            if (childToggle) {
+                const childId = childToggle.dataset.parentId;
+                // If collapsing, hide grandchildren regardless
+                // If expanding, only show grandchildren if that child's parent is expanded
+                const childExpanded = show && expandedParents.has(childId);
+                setChildrenVisibility(childId, childExpanded);
+            }
+        });
+    }
+    setChildrenVisibility(parentId, nowExpanded);
+}
+
+function isAuthed() {
+    return !!(sessionStorage.getItem('partnerId') && sessionStorage.getItem('partnerToken'));
+}
+
+// --- Add/Edit modal ---
+function populateParentSelect(excludeId) {
+    const sel = document.getElementById('fParentId');
+    // Only show events explicitly marked as parent (isParent: true)
+    const parents = allEvents.filter(e => e.isParent && e.id !== excludeId);
+    sel.innerHTML = '<option value="">Aucun</option>' +
+        parents.map(e => '<option value="' + escAttr(e.id) + '">' + escHtml(e.title) + ' (' + e.year + ')</option>').join('');
+}
+
+function openAddModal() {
+    editingId = null;
+    window._promoteContext = null;
+    document.getElementById('promoteTargetPanel').classList.add('d-none');
+    document.getElementById('fTitle').removeAttribute('readonly');
+    document.getElementById('fCategory').removeAttribute('disabled');
+    document.getElementById('fScope').removeAttribute('disabled');
+    document.getElementById('modalTitle').textContent = 'Ajouter un événement';
+    document.getElementById('eventForm').reset();
+    document.getElementById('fId').value = '';
+    originalWikiTitle = null;
+    showWikiPreview(null);
+    updateWikiButtons();
+    document.getElementById('summarySourcesPanel').classList.add('d-none');
+    populateParentSelect(null);
+    modal.show();
+}
+
+function openEditModal(id) {
+    const event = allEvents.find(e => e.id === id);
+    if (!event) return;
+    editingId = id;
+    window._promoteContext = null;
+    document.getElementById('promoteTargetPanel').classList.add('d-none');
+    document.getElementById('fTitle').removeAttribute('readonly');
+    document.getElementById('fCategory').removeAttribute('disabled');
+    document.getElementById('fScope').removeAttribute('disabled');
+    document.getElementById('modalTitle').textContent = 'Éditer: ' + event.title;
+    document.getElementById('fId').value = event.id;
+    document.getElementById('fTitle').value = event.title;
+    document.getElementById('fYear').value = event.year;
+    document.getElementById('fDate').value = event.date;
+    document.getElementById('fEndDate').value = event.endDate || '';
+    document.getElementById('fCategory').value = event.category;
+    document.getElementById('fScope').value = event.scope;
+    document.getElementById('fSubtype').value = event.subtype || '';
+    document.getElementById('fSummary').value = event.summary || '';
+    showSummarySources(event);
+    document.getElementById('fWikiTitle').value = event.wikiTitle || '';
+    document.getElementById('fImageUrl').value = event.imageUrl || '';
+    originalWikiTitle = event.wikiTitle || null;
+    showWikiPreview(event.imageUrl);
+    updateWikiButtons();
+    document.getElementById('fIsParent').checked = !!event.isParent;
+    populateParentSelect(id);
+    document.getElementById('fParentId').value = event.parentId || '';
+    modal.show();
+}
+
+async function saveEvent() {
+    const title = document.getElementById('fTitle').value.trim();
+    const dateStr = document.getElementById('fDate').value.trim();
+    if (!title || !dateStr) {
+        showToast('Titre et date sont requis', 'warning');
+        return;
+    }
+    const dateParts = dateStr.split('/');
+    const validDate = (dateParts.length === 3 && /^\d{2}\/\d{2}\/\d{4}$/.test(dateStr))
+        || (dateParts.length === 2 && /^\d{2}\/\d{4}$/.test(dateStr))
+        || (dateParts.length === 1 && /^\d{4}$/.test(dateStr));
+    if (!validDate) {
+        showToast('Format de date invalide (JJ/MM/AAAA, MM/AAAA ou AAAA)', 'warning');
+        return;
+    }
+    const year = parseInt(dateParts[dateParts.length - 1]);
+
+    let id = document.getElementById('fId').value.trim();
+    if (!id) {
+        id = title.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            + '-' + year;
+    }
+
+    const newWikiTitle = document.getElementById('fWikiTitle').value.trim() || null;
+
+    // If wikiTitle changed, auto-fetch image & summary from Wikipedia
+    if (newWikiTitle && newWikiTitle !== originalWikiTitle) {
+        try {
+            showToast('Recherche Wikipedia en cours...', 'info');
+            const params = new URLSearchParams({
+                action: 'query',
+                titles: newWikiTitle.replace(/_/g, ' '),
+                prop: 'pageimages|extracts',
+                piprop: 'thumbnail',
+                pithumbsize: '120',
+                exintro: '1', exsectionformat: 'plain', explaintext: '1', exsentences: '2',
+                redirects: '1', format: 'json', origin: '*'
+            });
+            const wikiRes = await fetch('https://fr.wikipedia.org/w/api.php?' + params);
+            const wikiData = await wikiRes.json();
+            const page = Object.values(wikiData.query?.pages || {}).find(p => p.missing === undefined);
+            if (page) {
+                if (page.thumbnail?.source) document.getElementById('fImageUrl').value = page.thumbnail.source;
+                if (page.extract && !document.getElementById('fSummary').value.trim()) {
+                    document.getElementById('fSummary').value = page.extract;
+                }
+            }
+        } catch (err) {
+            console.warn('[admin] Wikipedia fetch failed:', err.message);
+        }
+    }
+
+    const event = {
+        id,
+        year,
+        date: document.getElementById('fDate').value.trim(),
+        endDate: document.getElementById('fEndDate').value.trim() || null,
+        category: document.getElementById('fCategory').value,
+        scope: document.getElementById('fScope').value,
+        subtype: document.getElementById('fSubtype').value || null,
+        title,
+        summary: document.getElementById('fSummary').value.trim(),
+        wikiTitle: newWikiTitle,
+        imageUrl: document.getElementById('fImageUrl').value.trim() || null,
+        parentId: document.getElementById('fParentId').value || null,
+        isParent: document.getElementById('fIsParent').checked || false
+    };
+
+    try {
+        const authHeaders = await getAuthHeaders();
+
+        // Check if attaching to an existing event (promote mode with target selected)
+        const promoteTargetId = document.getElementById('promoteTarget')?.value;
+        const isAttaching = window._promoteContext && promoteTargetId;
+
+        if (isAttaching) {
+            // Enrich existing event with summarySenecal
+            const res = await fetch(BASE + '/enrich', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeaders },
+                body: JSON.stringify({
+                    eventId: promoteTargetId,
+                    summarySenecal: window._promoteContext.orphanText
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erreur');
+        } else {
+            // Normal curate upsert
+            const res = await fetch(BASE + '/curate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeaders },
+                body: JSON.stringify({ action: 'upsert', events: [event] })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erreur');
+        }
+
+        // If promoting an orphan, remove it from unmatched
+        if (window._promoteContext) {
+            try {
+                const { source, idx } = window._promoteContext;
+                await fetch(BASE + '/unmatched', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...authHeaders },
+                    body: JSON.stringify({ action: 'delete', source, indices: [idx] })
+                });
+            } catch {}
+            window._promoteContext = null;
+            document.getElementById('promoteTargetPanel').classList.add('d-none');
+        }
+
+        modal.hide();
+        showToast(isAttaching ? 'Résumé Senecal rattaché' : (editingId ? 'Événement modifié' : 'Événement ajouté'), 'success');
+        await loadData();
+    } catch (err) {
+        showToast('Erreur: ' + err.message, 'danger');
+    }
+}
+
+// --- Wikipedia helpers ---
+let originalWikiTitle = null; // Track original value for change detection
+
+function updateWikiButtons() {
+    const val = document.getElementById('fWikiTitle').value.trim();
+    document.getElementById('btnWikiOpen').disabled = !val;
+    document.getElementById('btnWikiFetch').disabled = !val;
+}
+
+function openWikiLink() {
+    const title = document.getElementById('fWikiTitle').value.trim();
+    if (title) window.open('https://fr.wikipedia.org/wiki/' + encodeURIComponent(title), '_blank');
+}
+
+function clearWikiData() {
+    document.getElementById('fWikiTitle').value = '';
+    document.getElementById('fImageUrl').value = '';
+    document.getElementById('fSummary').value = '';
+    document.getElementById('wikiPreview').classList.add('d-none');
+    updateWikiButtons();
+}
+
+// --- Summary sources panel ---
+function showSummarySources(event) {
+    const panel = document.getElementById('summarySourcesPanel');
+    const senecalPreview = document.getElementById('senecalPreview');
+    const wikipediaPreview = document.getElementById('wikipediaPreview');
+
+    const hasSenecal = !!event.summarySenecal;
+    const hasWikipedia = !!event.summaryWikipedia;
+
+    if (!hasSenecal && !hasWikipedia) {
+        panel.classList.add('d-none');
+        return;
+    }
+
+    panel.classList.remove('d-none');
+    senecalPreview.classList.toggle('d-none', !hasSenecal);
+    wikipediaPreview.classList.toggle('d-none', !hasWikipedia);
+    if (hasSenecal) document.getElementById('senecalText').textContent = event.summarySenecal;
+    if (hasWikipedia) document.getElementById('wikipediaText').textContent = event.summaryWikipedia;
+}
+
+function useSummarySource(source) {
+    if (source === 'senecal') {
+        document.getElementById('fSummary').value = document.getElementById('senecalText').textContent;
+    } else if (source === 'wikipedia') {
+        document.getElementById('fSummary').value = document.getElementById('wikipediaText').textContent;
+    }
+}
+
+function showWikiPreview(imageUrl) {
+    const preview = document.getElementById('wikiPreview');
+    const thumbEl = document.getElementById('wikiThumbPreview');
+
+    if (!imageUrl) {
+        preview.classList.add('d-none');
+        return;
+    }
+
+    thumbEl.innerHTML = '<img src="' + escHtml(imageUrl) + '" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px;">';
+    preview.classList.remove('d-none');
+}
+
+async function fetchWikiData() {
+    const title = document.getElementById('fWikiTitle').value.trim();
+    if (!title) return;
+
+    const status = document.getElementById('wikiFetchStatus');
+    status.classList.remove('d-none');
+    document.getElementById('btnWikiFetch').disabled = true;
+
+    try {
+        const params = new URLSearchParams({
+            action: 'query',
+            titles: title.replace(/_/g, ' '),
+            prop: 'pageimages|extracts',
+            piprop: 'thumbnail',
+            pithumbsize: '120',
+            exintro: '1',
+            exsectionformat: 'plain',
+            explaintext: '1',
+            exsentences: '2',
+            redirects: '1',
+            format: 'json',
+            origin: '*'
+        });
+
+        const res = await fetch('https://fr.wikipedia.org/w/api.php?' + params);
+        const data = await res.json();
+        const pages = data.query?.pages || {};
+        const page = Object.values(pages).find(p => p.missing === undefined);
+
+        if (page) {
+            const imageUrl = page.thumbnail?.source || null;
+            const summary = page.extract || null;
+
+            if (imageUrl) document.getElementById('fImageUrl').value = imageUrl;
+            if (summary && !document.getElementById('fSummary').value.trim()) {
+                document.getElementById('fSummary').value = summary;
+            }
+            showWikiPreview(imageUrl);
+            showToast(imageUrl ? 'Image récupérée' : 'Pas d\'image trouvée', 'success');
+        } else {
+            showWikiPreview(null);
+            showToast('Page Wikipedia introuvable', 'warning');
+        }
+    } catch (err) {
+        showToast('Erreur Wikipedia: ' + err.message, 'danger');
+    } finally {
+        status.classList.add('d-none');
+        updateWikiButtons();
+    }
+}
+
+// --- Delete / Block ---
+async function deleteEvent(id) {
+    const event = allEvents.find(e => e.id === id);
+    if (!event) return;
+
+    const isCurated = event.source === 'curated';
+    const actionLabel = isCurated ? 'Supprimer' : 'Bloquer';
+    const confirmMsg = isCurated
+        ? 'Supprimer "' + event.title + '" (' + event.year + ') ?'
+        : 'Bloquer "' + event.title + '" (' + event.year + ') ?\nCet événement sera exclu définitivement, même après un rafraîchissement.';
+
+    if (!confirm(confirmMsg)) return;
+
+    const action = isCurated ? 'delete' : 'block';
+    const payload = isCurated
+        ? { id }
+        : { id: event.id, wikidataId: event.wikidataId || null, title: event.title };
+
+    try {
+        const authHeaders = await getAuthHeaders();
+        const res = await fetch(BASE + '/curate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({ action, events: [payload] })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        showToast(isCurated ? 'Événement supprimé' : 'Événement bloqué', 'success');
+        await loadData();
+    } catch (err) {
+        showToast('Erreur: ' + err.message, 'danger');
+    }
+}
+
+// --- Unblock ---
+async function unblockEvent(id) {
+    const event = blockedEvents.find(e => e.id === id);
+    if (!event) return;
+    if (!confirm('Débloquer "' + (event.title || event.id) + '" ?\nL\'événement réapparaîtra au prochain rafraîchissement.')) return;
+
+    try {
+        const authHeaders = await getAuthHeaders();
+        const res = await fetch(BASE + '/curate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({ action: 'unblock', events: [{ id }] })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        showToast('Événement débloqué', 'success');
+        await loadData();
+    } catch (err) {
+        showToast('Erreur: ' + err.message, 'danger');
+    }
+}
+
+// --- Toggle blocked view ---
+function toggleBlockedView() {
+    showingBlocked = !showingBlocked;
+    if (showingBlocked) showingOrphans = false;
+    const card = document.querySelector('.stat-card.blocked');
+    card.classList.toggle('bg-dark', showingBlocked);
+    card.classList.toggle('text-white', showingBlocked);
+    // Reset orphans card
+    const orphansCard = document.querySelector('.stat-card.orphans');
+    orphansCard.classList.remove('bg-dark', 'text-white');
+    if (showingBlocked) {
+        renderBlockedTable();
+    } else {
+        applyFilters();
+    }
+}
+
+function toggleOrphansView() {
+    showingOrphans = !showingOrphans;
+    if (showingOrphans) showingBlocked = false;
+    const card = document.querySelector('.stat-card.orphans');
+    card.classList.toggle('bg-dark', showingOrphans);
+    card.classList.toggle('text-white', showingOrphans);
+    // Reset blocked card
+    const blockedCard = document.querySelector('.stat-card.blocked');
+    blockedCard.classList.remove('bg-dark', 'text-white');
+    if (showingOrphans) {
+        renderOrphansTable();
+    } else {
+        applyFilters();
+    }
+}
+
+function renderOrphansTable() {
+    const tbody = document.getElementById('eventsBody');
+    const allOrphans = [];
+    for (const [source, events] of Object.entries(orphanEvents)) {
+        events.forEach((e, idx) => allOrphans.push({ ...e, _source: source, _idx: idx }));
+    }
+    allOrphans.sort((a, b) => (a.year || 0) - (b.year || 0));
+
+    document.getElementById('countBadge').textContent = allOrphans.length + ' orphelins';
+
+    if (allOrphans.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Aucun événement orphelin</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = allOrphans.map((o, i) => {
+        const dis = isAuthed() ? '' : 'disabled';
+        const scopeBadge = '<span class="badge bg-light text-dark">' + (SCOPE_LABELS[o.scope] || o.scope || '') + '</span>';
+        const sourceBadge = '<span class="badge bg-warning text-dark" style="font-size:.7em">' + escHtml(o._source) + '</span>';
+        const textPreview = escHtml((o.text || '').substring(0, 200)) + (o.text && o.text.length > 200 ? '…' : '');
+
+        return '<tr data-orphan-source="' + escAttr(o._source) + '" data-orphan-idx="' + o._idx + '">' +
+            '<td></td>' +
+            '<td></td>' +
+            '<td><input type="text" class="form-control form-control-sm orphan-year" value="' + escAttr(String(o.year || '')) + '" style="width:55px;font-weight:bold" ' + dis + '></td>' +
+            '<td><input type="text" class="form-control form-control-sm orphan-date" value="' + escAttr(o.date || '') + '" style="width:90px" placeholder="JJ/MM/AAAA" ' + dis + '></td>' +
+            '<td></td>' +
+            '<td class="title-cell"><div class="small">' + textPreview + '</div></td>' +
+            '<td></td>' +
+            '<td>' + scopeBadge + '</td>' +
+            '<td>' + sourceBadge + '</td>' +
+            '<td>' +
+                '<button class="btn btn-outline-success btn-sm me-1 admin-only btn-promote" ' +
+                    dis + ' title="Promouvoir en événement"><i class="bi bi-plus-circle"></i></button>' +
+                '<button class="btn btn-outline-danger btn-sm admin-only btn-delete-orphan" ' +
+                    dis + ' title="Supprimer"><i class="bi bi-trash"></i></button>' +
+            '</td></tr>';
+    }).join('');
+
+    // Wire up buttons
+    tbody.querySelectorAll('.btn-delete-orphan').forEach(btn => {
+        const tr = btn.closest('tr');
+        btn.addEventListener('click', () => deleteOrphan(tr.dataset.orphanSource, parseInt(tr.dataset.orphanIdx)));
+    });
+    tbody.querySelectorAll('.btn-promote').forEach(btn => {
+        const tr = btn.closest('tr');
+        btn.addEventListener('click', () => promoteOrphan(tr.dataset.orphanSource, parseInt(tr.dataset.orphanIdx)));
+    });
+
+    // Save year/date on blur
+    tbody.querySelectorAll('.orphan-year, .orphan-date').forEach(input => {
+        const original = input.value;
+        input.addEventListener('blur', () => {
+            if (input.value === original) return;
+            const tr = input.closest('tr');
+            const source = tr.dataset.orphanSource;
+            const idx = parseInt(tr.dataset.orphanIdx);
+            const isYear = input.classList.contains('orphan-year');
+            updateOrphanField(source, idx, isYear ? 'year' : 'date', input.value);
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        });
+    });
+}
+
+async function updateOrphanField(source, idx, field, value) {
+    try {
+        const authHeaders = await getAuthHeaders();
+        const updates = {};
+        if (field === 'year') updates.year = parseInt(value) || null;
+        if (field === 'date') updates.date = value || null;
+
+        const res = await fetch(BASE + '/unmatched', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({ action: 'update', source, indices: [idx], updates })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        showToast('Orphelin mis à jour', 'success');
+        // Update local data
+        if (orphanEvents[source] && orphanEvents[source][idx]) {
+            if (field === 'year') orphanEvents[source][idx].year = updates.year;
+            if (field === 'date') orphanEvents[source][idx].date = updates.date;
+        }
+    } catch (err) {
+        showToast('Erreur: ' + err.message, 'danger');
+    }
+}
+
+async function deleteOrphan(source, idx) {
+    if (!confirm('Supprimer cet événement orphelin ?')) return;
+    try {
+        const authHeaders = await getAuthHeaders();
+        const res = await fetch(BASE + '/unmatched', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({ action: 'delete', source, indices: [idx] })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        showToast('Orphelin supprimé (' + data.remaining + ' restants)', 'success');
+        await loadData();
+    } catch (err) {
+        showToast('Erreur: ' + err.message, 'danger');
+    }
+}
+
+function promoteOrphan(source, idx) {
+    const orphanList = orphanEvents[source] || [];
+    const orphan = orphanList[idx];
+    if (!orphan) return;
+
+    // Open add modal pre-filled with orphan data
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Promouvoir un orphelin (' + orphan.year + ')';
+    document.getElementById('eventForm').reset();
+    document.getElementById('fId').value = '';
+    document.getElementById('fTitle').removeAttribute('readonly');
+    document.getElementById('fCategory').removeAttribute('disabled');
+    document.getElementById('fScope').removeAttribute('disabled');
+    document.getElementById('fYear').value = orphan.year || '';
+    document.getElementById('fDate').value = orphan.date || (orphan.year ? '01/01/' + orphan.year : '');
+    document.getElementById('fScope').value = orphan.scope || 'france';
+    document.getElementById('fSummary').value = orphan.text || '';
+    document.getElementById('summarySourcesPanel').classList.add('d-none');
+    originalWikiTitle = null;
+    showWikiPreview(null);
+    updateWikiButtons();
+    populateParentSelect(null);
+
+    // Populate existing events dropdown for same year
+    // Include: events with same year + parent events whose period covers the orphan year
+    const panel = document.getElementById('promoteTargetPanel');
+    const sel = document.getElementById('promoteTarget');
+    const oYear = orphan.year;
+    const sameYear = allEvents.filter(e => {
+        if (e.year === oYear) return true;
+        // Parent events spanning this year (endDate contains the end year)
+        if (e.endDate) {
+            const endParts = e.endDate.split('/');
+            const endYear = parseInt(endParts[endParts.length - 1]);
+            if (e.year <= oYear && endYear >= oYear) return true;
+        }
+        return false;
+    }).sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    if (sameYear.length > 0) {
+        sel.innerHTML = '<option value="">— Créer un nouvel événement —</option>' +
+            sameYear.map(e =>
+                '<option value="' + escAttr(e.id) + '">' +
+                    (e.date ? e.date + ' ' : '') + escHtml(e.title) + ' [' + (e.scope || '') + ', ' + (e.category || '') + ']' +
+                '</option>'
+            ).join('');
+        panel.classList.remove('d-none');
+    } else {
+        panel.classList.add('d-none');
+    }
+
+    // Store promote context for save handler
+    window._promoteContext = { source, idx, orphanText: orphan.text };
+    modal.show();
+}
+
+function onPromoteTargetChange() {
+    const targetId = document.getElementById('promoteTarget').value;
+    if (!targetId) {
+        // Reset to new event mode
+        document.getElementById('fTitle').value = '';
+        document.getElementById('fTitle').removeAttribute('readonly');
+        document.getElementById('fCategory').removeAttribute('disabled');
+        document.getElementById('fScope').removeAttribute('disabled');
+        return;
+    }
+
+    // Pre-fill from existing event
+    const event = allEvents.find(e => e.id === targetId);
+    if (!event) return;
+
+    document.getElementById('fId').value = event.id;
+    document.getElementById('fTitle').value = event.title;
+    document.getElementById('fTitle').setAttribute('readonly', true);
+    document.getElementById('fDate').value = event.date || '';
+    document.getElementById('fEndDate').value = event.endDate || '';
+    document.getElementById('fCategory').value = event.category;
+    document.getElementById('fCategory').setAttribute('disabled', true);
+    document.getElementById('fScope').value = event.scope;
+    document.getElementById('fScope').setAttribute('disabled', true);
+    document.getElementById('fSubtype').value = event.subtype || '';
+    document.getElementById('fWikiTitle').value = event.wikiTitle || '';
+    document.getElementById('fImageUrl').value = event.imageUrl || '';
+    showWikiPreview(event.imageUrl);
+    updateWikiButtons();
+
+    // Keep orphan text in summary
+    if (window._promoteContext) {
+        document.getElementById('fSummary').value = window._promoteContext.orphanText || '';
+    }
+}
+
+// --- Wikidata refresh ---
+async function doRefresh() {
+    if (!confirm('Lancer le rafraîchissement depuis la master list + Wikipedia ?\nCette opération peut prendre 15-30 secondes.')) return;
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+        const authHeaders = await getAuthHeaders();
+        const res = await fetch(BASE + '/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        showToast('Rafraîchi: ' + data.totalCount + ' événements (' + data.masterlistCount + ' master list, ' + data.resolvedCount + ' résolus)', 'success');
+        await loadData();
+    } catch (err) {
+        showToast('Erreur refresh: ' + err.message, 'danger');
+    } finally {
+        btn.classList.remove('loading');
+        if (isAuthed()) btn.disabled = false;
+    }
+}
+
+// --- Migrate war taxonomy ---
+async function doMigrate() {
+    if (!confirm('Migrer les événements curated category:war vers la nouvelle taxonomie ?')) return;
+    const btn = document.getElementById('migrateBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+        const authHeaders = await getAuthHeaders();
+        const res = await fetch(BASE + '/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        if (data.migrated > 0) {
+            showToast('Migration: ' + data.migrated + ' événements migrés (' + data.totalCount + ' total)', 'success');
+            await loadData();
+        } else {
+            showToast(data.message || 'Aucun événement à migrer', 'info');
+        }
+    } catch (err) {
+        showToast('Erreur migration: ' + err.message, 'danger');
+    } finally {
+        btn.classList.remove('loading');
+        if (isAuthed()) btn.disabled = false;
+    }
+}
+
+// --- Export ---
+function exportJSON() {
+    const blob = new Blob([JSON.stringify(allEvents, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'historical-events.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function exportCSV() {
+    const headers = ['id','year','date','endDate','title','category','scope','subtype','source','parentId','isParent','wikiTitle','wikidataId','summary','imageUrl'];
+    const escapeCsv = (val) => {
+        if (val == null) return '';
+        const s = String(val);
+        return s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r') ? '"' + s.replace(/"/g, '""').replace(/[\r\n]+/g, ' ') + '"' : s;
+    };
+    const rows = [headers.join(',')];
+    for (const e of allEvents) {
+        rows.push(headers.map(h => escapeCsv(e[h])).join(','));
+    }
+    const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'historical-events.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// --- Blocked table ---
+function renderBlockedTable() {
+    const tbody = document.getElementById('eventsBody');
+    document.getElementById('countBadge').textContent = blockedEvents.length + ' bloqués';
+
+    if (blockedEvents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Aucun événement bloqué</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = blockedEvents.map(b => {
+        const safeId = escAttr(b.id);
+        const dis = isAuthed() ? '' : 'disabled';
+        const dateStr = b.blockedAt ? new Date(b.blockedAt).toLocaleDateString('fr-FR') : '';
+        return '<tr class="table-secondary">' +
+            '<td><i class="bi bi-eye-slash text-muted"></i></td>' +
+            '<td colspan="2" class="text-muted small">' + escHtml(b.id) + '</td>' +
+            '<td>' + escHtml(b.title || '(sans titre)') +
+                (b.wikidataId ? '<div class="text-muted small">' + escHtml(b.wikidataId) + '</div>' : '') +
+            '</td>' +
+            '<td colspan="2" class="text-muted small">Bloqué le ' + dateStr + '</td>' +
+            '<td></td>' +
+            '<td>' +
+                '<button class="btn btn-outline-success btn-sm admin-only btn-unblock" data-id="' + safeId + '" ' +
+                    dis + ' title="Débloquer"><i class="bi bi-eye"></i></button>' +
+            '</td></tr>';
+    }).join('');
+
+    tbody.querySelectorAll('.btn-unblock').forEach(btn => {
+        btn.addEventListener('click', () => unblockEvent(btn.dataset.id));
+    });
+}
+
+// --- Helpers ---
+function escHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escAttr(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function showToast(message, type = 'info') {
+    const toastEl = document.getElementById('toast');
+    const body = document.getElementById('toastBody');
+    toastEl.className = 'toast text-bg-' + type;
+    const icon = type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle';
+    body.innerHTML = '<i class="bi bi-' + icon + '"></i> ' + escHtml(message);
+    bootstrap.Toast.getOrCreateInstance(toastEl).show();
+}
+
+// --- Import ---
+function setupDropZone() {
+    const zone = document.getElementById('dropZone');
+    const input = document.getElementById('importFile');
+
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) handleImportFile(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', () => {
+        if (input.files.length > 0) handleImportFile(input.files[0]);
+    });
+    document.getElementById('chunkSize').addEventListener('change', updateChunkInfo);
+}
+
+function handleImportFile(file) {
+    if (!file.name.endsWith('.txt')) {
+        showToast('Seuls les fichiers .txt sont acceptés', 'warning');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        importFileContent = e.target.result;
+        const lines = importFileContent.split('\n').filter(l => l.trim()).length;
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileLines').textContent = lines + ' lignes';
+        document.getElementById('fileInfo').classList.remove('d-none');
+        document.getElementById('startImportBtn').disabled = false;
+        updateChunkInfo();
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+function updateChunkInfo() {
+    if (!importFileContent) return;
+    const lines = importFileContent.split('\n').filter(l => l.trim()).length;
+    const chunkSize = parseInt(document.getElementById('chunkSize').value);
+    const info = document.getElementById('chunkInfo');
+    if (chunkSize === 0 || lines <= chunkSize) {
+        info.textContent = '1 envoi unique';
+    } else {
+        const chunks = Math.ceil(lines / chunkSize);
+        info.textContent = chunks + ' lots de ~' + chunkSize + ' lignes';
+    }
+}
+
+function openImportModal() {
+    importFileContent = null;
+    document.getElementById('fileInfo').classList.add('d-none');
+    document.getElementById('startImportBtn').disabled = true;
+    document.getElementById('importFile').value = '';
+    importModal.show();
+}
+
+async function startImport() {
+    if (!importFileContent) return;
+    importModal.hide();
+
+    const progress = document.getElementById('importProgress');
+    const bar = document.getElementById('importBar');
+    const msg = document.getElementById('importMessage');
+    progress.classList.add('active');
+    bar.style.width = '0%';
+
+    const chunkSize = parseInt(document.getElementById('chunkSize').value);
+    const allLines = importFileContent.split('\n');
+
+    // Split into chunks if needed
+    let chunks;
+    if (chunkSize === 0 || allLines.length <= chunkSize) {
+        chunks = [importFileContent];
+    } else {
+        chunks = [];
+        for (let i = 0; i < allLines.length; i += chunkSize) {
+            const chunk = allLines.slice(i, i + chunkSize).join('\n');
+            if (chunk.trim()) chunks.push(chunk);
+        }
+    }
+
+    const totalChunks = chunks.length;
+    let totalExtracted = 0;
+    let totalDuplicates = 0;
+    let chunkErrors = 0;
+
+    try {
+        const authHeaders = await getAuthHeaders();
+
+        for (let ci = 0; ci < totalChunks; ci++) {
+            const chunkLabel = totalChunks > 1 ? ' (lot ' + (ci + 1) + '/' + totalChunks + ')' : '';
+            msg.textContent = 'Envoi' + chunkLabel + '...';
+
+            // Base offset for this chunk in the global progress bar
+            const chunkStart = (ci / totalChunks) * 100;
+            const chunkSpan = 100 / totalChunks;
+
+            const res = await fetch(BASE + '/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain', ...authHeaders },
+                body: chunks[ci]
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                chunkErrors++;
+                showToast('Erreur lot ' + (ci + 1) + ': ' + (errText || 'Erreur serveur'), 'danger');
+                continue; // try next chunk
+            }
+
+            // Stream SSE for this chunk
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            const STEPS = { parsing: 0.05, structuration: 0.55, wikipedia: 0.70, dedup: 0.80, merge: 0.85, enrichment: 0.95 };
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop();
+
+                for (const part of parts) {
+                    for (const line of part.split('\n')) {
+                        if (!line.startsWith('data: ')) continue;
+                        let event;
+                        try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+                        // Map chunk-local progress to global progress
+                        let localPct = 0;
+                        if (event.step === 'structuration' && event.totalBatches) {
+                            localPct = 0.05 + (event.batch / event.totalBatches) * 0.50;
+                        } else if (STEPS[event.step]) {
+                            localPct = STEPS[event.step];
+                        }
+                        const globalPct = chunkStart + localPct * chunkSpan;
+                        bar.style.width = Math.round(globalPct) + '%';
+
+                        // Update message with chunk prefix
+                        if (event.message) {
+                            msg.textContent = chunkLabel ? '[Lot ' + (ci + 1) + '/' + totalChunks + '] ' + event.message : event.message;
+                        }
+
+                        // Track totals from done step
+                        if (event.step === 'done') {
+                            if (event.extracted) totalExtracted += event.extracted;
+                            if (event.duplicates) totalDuplicates += event.duplicates;
+                        }
+
+                        // Handle chunk error
+                        if (event.step === 'error') {
+                            chunkErrors++;
+                            showToast('Erreur lot ' + (ci + 1) + ': ' + event.message, 'danger');
+                        }
+                    }
+                }
+            }
+        }
+
+        // All chunks done — show summary
+        bar.style.width = '100%';
+        bar.classList.remove('progress-bar-animated', 'progress-bar-striped');
+
+        const summary = totalExtracted + ' événements importés' +
+            (totalDuplicates ? ', ' + totalDuplicates + ' doublons ignorés' : '') +
+            (chunkErrors ? ', ' + chunkErrors + ' lot(s) en erreur' : '') +
+            (totalChunks > 1 ? ' (' + totalChunks + ' lots)' : '');
+
+        msg.innerHTML = '<i class="bi bi-check-circle me-1"></i>' + escHtml(summary);
+        progress.className = chunkErrors ? 'alert alert-warning py-2 mb-3 active' : 'alert alert-success py-2 mb-3 active';
+        showToast(summary, chunkErrors ? 'warning' : 'success');
+        await loadData();
+
+        setTimeout(() => {
+            progress.classList.remove('active');
+            progress.className = 'alert alert-info py-2 mb-3';
+            bar.classList.add('progress-bar-animated', 'progress-bar-striped');
+        }, 5000);
+
+    } catch (err) {
+        progress.classList.remove('active');
+        showToast('Erreur import: ' + err.message, 'danger');
+    }
+}
+</script>
+
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e49b755fbeb2de7',t:'MTc3NDkwMDk5MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
