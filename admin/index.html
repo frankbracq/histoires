@@ -588,8 +588,12 @@ async function computeHmacToken(partnerId, secret) {
 async function getAuthHeaders() {
     const pid = sessionStorage.getItem('partnerId') || '';
     const secret = sessionStorage.getItem('partnerSecret') || '';
-    if (!pid || !secret) return { 'X-Partner-ID': '', 'X-Partner-Token': '' };
+    if (!pid || !secret) {
+        console.warn('[auth] Missing credentials', { pid: !!pid, secret: !!secret });
+        return { 'X-Partner-ID': '', 'X-Partner-Token': '' };
+    }
     const token = await computeHmacToken(pid, secret);
+    console.log('[auth]', { pid, secretLen: secret.length, token: token.substring(0, 8) + '...' });
     return { 'X-Partner-ID': pid, 'X-Partner-Token': token };
 }
 
