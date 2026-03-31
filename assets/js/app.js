@@ -98,22 +98,23 @@ function selectCentury(c) {
 // Horizontal timeline with 5-year periods
 // ===================================================================
 function buildTimeline() {
-    const yearStart = (activeCentury - 1) * 100 + 1;
-    const yearEnd = activeCentury * 100;
-
-    // Count events per 5-year period
+    // Period grid: aligned to 5-year boundaries
     const periodStarts = [];
-    for (let y = Math.floor(yearStart / YEARS_GROUP) * YEARS_GROUP; y <= yearEnd; y += YEARS_GROUP) {
+    const rawStart = (activeCentury - 1) * 100 + 1;
+    const rawEnd = activeCentury * 100;
+    const gridStart = Math.floor(rawStart / YEARS_GROUP) * YEARS_GROUP; // e.g. 1700
+    for (let y = gridStart; y <= rawEnd; y += YEARS_GROUP) {
         periodStarts.push(y);
     }
+    const gridEnd = periodStarts[periodStarts.length - 1] + YEARS_GROUP; // e.g. 1805
 
-    const PX_PER_PERIOD = 140; // fixed width for comfortable scrolling
+    const PX_PER_PERIOD = 140;
     const totalWidth = periodStarts.length * PX_PER_PERIOD;
 
     const scroll = document.getElementById('timelineScroll');
     scroll.style.width = totalWidth + 'px';
 
-    // Period markers (the bar with date links)
+    // Period markers
     const markersEl = document.getElementById('periodMarkers');
     markersEl.innerHTML = '';
     for (const ps of periodStarts) {
@@ -138,13 +139,11 @@ function buildTimeline() {
         markersEl.appendChild(div);
     }
 
-    // Leaders band
-    renderBand('leadersBand', leaders, yearStart, yearEnd, totalWidth, l =>
+    // Bands use the same grid range so they align with period markers
+    renderBand('leadersBand', leaders, gridStart, gridEnd, totalWidth, l =>
         l.dynasty ? `dy-${l.dynasty}` : `rg-${l.regime}`
     );
-
-    // Wars band
-    renderBand('warsBand', wars, yearStart, yearEnd, totalWidth, () => 'tl-war');
+    renderBand('warsBand', wars, gridStart, gridEnd, totalWidth, () => 'tl-war');
 
     // Auto-select first period with events
     const firstWithEvents = periodStarts.find(ps =>
@@ -153,21 +152,21 @@ function buildTimeline() {
     if (firstWithEvents !== undefined) selectPeriodFromBar(firstWithEvents);
 }
 
-function renderBand(elId, items, yearStart, yearEnd, totalWidth, classFn) {
+function renderBand(elId, items, gridStart, gridEnd, totalWidth, classFn) {
     const band = document.getElementById(elId);
     band.innerHTML = '';
     band.style.width = totalWidth + 'px';
 
-    const span = yearEnd + 1 - yearStart;
+    const span = gridEnd - gridStart;
     for (const item of items) {
         const iStart = parseDateToFrac(item.date || `01/01/${item.year}`);
         const iEnd = parseDateToFrac(item.endDate || item.date || `01/01/${item.year}`);
-        if (iEnd < yearStart || iStart > yearEnd + 1) continue;
+        if (iEnd < gridStart || iStart > gridEnd) continue;
 
-        const cs = Math.max(iStart, yearStart);
-        const ce = Math.min(iEnd, yearEnd + 1);
+        const cs = Math.max(iStart, gridStart);
+        const ce = Math.min(iEnd, gridEnd);
 
-        const leftPx = ((cs - yearStart) / span) * totalWidth;
+        const leftPx = ((cs - gridStart) / span) * totalWidth;
         const widthPx = Math.max(((ce - cs) / span) * totalWidth, 2);
 
         const seg = document.createElement('div');
