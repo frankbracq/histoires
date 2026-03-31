@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>histoir.es — Descriptions des siècles</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f8f9fa; color: #333; padding: 2rem; max-width: 800px; margin: 0 auto; }
+        h1 { font-size: 1.3rem; margin-bottom: 1.5rem; }
+        .back { font-size: 0.85rem; color: #8b4513; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+        .back:hover { text-decoration: underline; }
+        .auth-row { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; align-items: center; }
+        .auth-row input { padding: 0.4rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; }
+        .auth-row button { padding: 0.4rem 0.8rem; background: #8b4513; color: #fff; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
+        .auth-row button:hover { background: #6d3710; }
+        .status { font-size: 0.75rem; color: #666; }
+        .century-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: flex-start; }
+        .century-label { flex-shrink: 0; width: 80px; font-weight: 600; font-size: 0.85rem; padding-top: 0.4rem; color: #8b4513; }
+        .century-title { padding: 0.4rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; font-family: inherit; font-weight: 600; }
+        .century-title:focus { outline: none; border-color: #8b4513; }
+        .century-textarea { padding: 0.4rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; font-family: inherit; resize: vertical; min-height: 60px; }
+        .century-textarea:focus { outline: none; border-color: #8b4513; }
+        .save-btn { margin-top: 1rem; padding: 0.5rem 1.5rem; background: #198754; color: #fff; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer; }
+        .save-btn:hover { background: #157347; }
+        .save-btn:disabled { background: #999; cursor: not-allowed; }
+        .toast { position: fixed; bottom: 1rem; right: 1rem; padding: 0.5rem 1rem; border-radius: 6px; color: #fff; font-size: 0.8rem; opacity: 0; transition: opacity 0.3s; }
+        .toast.show { opacity: 1; }
+        .toast.success { background: #198754; }
+        .toast.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <a href="/admin/" class="back">&larr; Retour à l'admin</a>
+    <h1>Descriptions des siècles</h1>
+
+    <div class="auth-row">
+        <input type="text" id="pid" placeholder="Partner ID">
+        <input type="password" id="secret" placeholder="Secret">
+        <button onclick="authenticate()">Connexion</button>
+        <span class="status" id="authStatus"></span>
+    </div>
+
+    <div id="centuryList">Chargement...</div>
+    <button class="save-btn" id="saveBtn" disabled onclick="saveAll()">Enregistrer</button>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    const API = 'https://historical-events.genealogie.app';
+    const C_LABELS = ['','Ier','IIe','IIIe','IVe','Ve','VIe','VIIe','VIIIe','IXe','Xe',
+        'XIe','XIIe','XIIIe','XIVe','XVe','XVIe','XVIIe','XVIIIe','XIXe','XXe','XXIe'];
+
+    let descriptions = {};
+    let authed = false;
+
+    async function init() {
+        // Restore session
+        const pid = sessionStorage.getItem('partnerId');
+        const secret = sessionStorage.getItem('partnerSecret');
+        if (pid) document.getElementById('pid').value = pid;
+        if (secret) document.getElementById('secret').value = secret;
+        if (pid && secret) { authed = true; document.getElementById('authStatus').textContent = 'Connecté'; document.getElementById('saveBtn').disabled = false; }
+
+        // Load descriptions
+        try {
+            const res = await fetch(`${API}/centuries`, { cache: 'no-store' });
+            descriptions = await res.json();
+        } catch { descriptions = {}; }
+
+        // Load events to know which centuries exist
+        const evRes = await fetch(`${API}/events`, { cache: 'no-store' });
+        const payload = await evRes.json();
+        const events = (payload.events || []).filter(e => e.subtype !== 'leader');
+
+        const centuries = new Set();
+        for (const e of events) centuries.add(Math.floor((e.year - 1) / 100) + 1);
+        const sorted = [...centuries].sort((a, b) => a - b);
+
+        const container = document.getElementById('centuryList');
+        container.innerHTML = sorted.map(c => {
+            const label = (C_LABELS[c] || c + 'e') + ' siècle';
+            const data = descriptions[String(c)] || {};
+            // Support legacy string format
+            const title = typeof data === 'string' ? data : (data.title || '');
+            const content = typeof data === 'string' ? '' : (data.content || '');
+            return `<div class="century-row">
+                <div class="century-label">${label}</div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:0.3rem">
+                    <input type="text" class="century-title" data-c="${c}" placeholder="Titre court" value="${esc(title)}">
+                    <textarea class="century-textarea" data-c="${c}" placeholder="Contenu détaillé...">${esc(content)}</textarea>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    async function authenticate() {
+        const pid = document.getElementById('pid').value.trim();
+        const secret = document.getElementById('secret').value.trim();
+        const token = await computeHmac(pid, secret);
+
+        const res = await fetch(`${API}/curate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Partner-ID': pid, 'X-Partner-Token': token },
+            body: JSON.stringify({ action: 'upsert', events: [] })
+        });
+
+        if (res.status !== 401 && res.status !== 403) {
+            sessionStorage.setItem('partnerId', pid);
+            sessionStorage.setItem('partnerSecret', secret);
+            authed = true;
+            document.getElementById('authStatus').textContent = 'Connecté';
+            document.getElementById('saveBtn').disabled = false;
+            toast('Connecté', 'success');
+        } else {
+            toast('Identifiants incorrects', 'error');
+        }
+    }
+
+    async function saveAll() {
+        if (!authed) return;
+        const pid = sessionStorage.getItem('partnerId');
+        const secret = sessionStorage.getItem('partnerSecret');
+        const token = await computeHmac(pid, secret);
+
+        const data = {};
+        document.querySelectorAll('.century-title').forEach(input => {
+            const c = input.dataset.c;
+            const title = input.value.trim();
+            const content = document.querySelector(`.century-textarea[data-c="${c}"]`).value.trim();
+            if (title || content) data[c] = { title, content };
+        });
+
+        try {
+            const res = await fetch(`${API}/centuries`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Partner-ID': pid, 'X-Partner-Token': token },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (res.ok) toast(`${result.count} descriptions enregistrées`, 'success');
+            else toast(result.error || 'Erreur', 'error');
+        } catch (err) { toast(err.message, 'error'); }
+    }
+
+    async function computeHmac(pid, secret) {
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sig = await crypto.subtle.sign('HMAC', key, enc.encode(pid + '-' + new Date().toISOString().split('T')[0]));
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function toast(msg, type) {
+        const t = document.getElementById('toast');
+        t.textContent = msg; t.className = `toast ${type} show`;
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    init();
+    </script>
+</body>
+</html>

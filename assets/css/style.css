@@ -185,60 +185,59 @@ body {
 /* War color */
 .tl-war { background: #c0392b; }
 
-/* Period markers — horizontal bar with 5-year links */
+/* Period markers — sits directly below the wars band */
 .tl-periods {
     position: relative;
-    height: 36px;
+    height: 28px;
     display: flex;
-    border-top: 1px solid var(--border);
+    background: var(--surface);
 }
 .tl-period {
     flex-shrink: 0;
-    font-size: 0.7rem; font-weight: 600;
-    color: var(--muted);
-    border-left: 1px solid var(--border);
     cursor: pointer;
     position: relative;
+    border-left: 1px solid rgba(0,0,0,0.12);
 }
-.tl-period:last-child { border-right: 1px solid var(--border); }
-/* Active indicator: thin bar at middle height, not full background */
-.tl-period::after {
-    content: '';
-    position: absolute;
-    left: 0; right: 0;
-    top: 40%; height: 30%;
-    border-radius: 2px;
-    background: transparent;
-    transition: background 0.15s;
-    z-index: 0;
-}
-.tl-period:hover::after { background: var(--accent-light); }
-.tl-period.active::after { background: var(--accent); opacity: 0.3; }
-/* Labels and dots always stay accent color */
-.tl-period.active .tl-period-year { color: var(--accent); font-weight: 700; }
-.tl-period.active .tl-count { font-weight: 600; }
+.tl-period:last-child { border-right: 1px solid rgba(0,0,0,0.12); }
 
-/* Year label centered on the left border (straddles the boundary) */
+/* Active highlight: full height, subtle */
+.tl-period.active {
+    background: rgba(139, 69, 19, 0.12);
+}
+.tl-period:hover:not(.active) {
+    background: rgba(139, 69, 19, 0.06);
+}
+
+/* Year label on the left border */
 .tl-period-year {
     position: absolute;
-    top: 2px;
+    top: 3px;
     left: 0;
     transform: translateX(-50%);
-    font-size: 0.68rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--accent);
     white-space: nowrap;
     z-index: 1;
 }
+.tl-period.active .tl-period-year { font-weight: 700; }
+
+/* Dot on the border line */
 .tl-dot {
     position: absolute;
-    left: 0; bottom: 6px;
+    left: 0; bottom: 4px;
     transform: translateX(-50%);
-    width: 7px; height: 7px; border-radius: 50%;
+    width: 6px; height: 6px; border-radius: 50%;
     background: var(--accent);
+    z-index: 1;
 }
+
+/* Event count */
 .tl-count {
     position: absolute;
-    left: 8px; bottom: 4px;
-    font-size: 0.5rem; font-weight: 400; opacity: 0.6;
+    left: 8px; bottom: 3px;
+    font-size: 0.5rem; font-weight: 500;
+    color: var(--accent); opacity: 0.6;
 }
 
 /* Year pills — sub-navigation within selected 5-year period */
@@ -348,6 +347,44 @@ body {
     font-size: 1.3rem;
 }
 .events-count { font-size: 0.78rem; color: var(--muted); }
+.century-desc {
+    font-size: 0.85rem;
+    color: #5c3a28;
+    line-height: 1.5;
+    margin: 0 0 0.75rem 0;
+    padding: 0.4rem 0.75rem;
+    background: #f5ebe0;
+    border-left: 3px solid #8b4513;
+    border-radius: 0 4px 4px 0;
+    display: block;
+}
+.century-desc:empty { display: none; }
+.century-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.century-chevron {
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+}
+.century-desc.expanded .century-chevron {
+    transform: rotate(180deg);
+}
+.century-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, margin 0.3s ease;
+    font-size: 0.8rem;
+    color: #6b4a3a;
+    line-height: 1.5;
+    white-space: pre-line;
+    margin-top: 0;
+}
+.century-desc.expanded .century-content {
+    max-height: 300px;
+    margin-top: 0.4rem;
+}
 
 /* Events grid — category rows with horizontal cards */
 .events-grid {

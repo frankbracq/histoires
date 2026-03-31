@@ -38,6 +38,7 @@ let activeYear = null;
 let activeCategory = null;
 let activeScope = null;
 let searchQuery = '';
+let centuryDescriptions = {};
 
 // --- Init ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -52,6 +53,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         wars = raw.filter(e => e.subtype === 'war' && e.isParent && !e.parentId);
 
         document.getElementById('eventCount').textContent = `${allEvents.length} événements`;
+
+        // Load century descriptions
+        try {
+            const cRes = await fetch(`${API}/centuries`, { cache: 'no-store' });
+            centuryDescriptions = await cRes.json();
+        } catch { centuryDescriptions = {}; }
 
         buildCenturyBar();
         buildFilters();
@@ -301,6 +308,33 @@ function applyFilters() {
     else title.textContent = 'Tous les événements';
 
     document.getElementById('filteredCount').textContent = `${events.length} événement${events.length > 1 ? 's' : ''}`;
+
+    // Century description: title always visible, content in accordion
+    const descEl = document.getElementById('centuryDesc');
+    const raw = activeCentury ? centuryDescriptions[String(activeCentury)] : null;
+    // Support legacy string and new {title, content} format
+    const descData = typeof raw === 'string' ? { title: raw, content: '' } : raw;
+
+    if (descData?.title) {
+        const centuryLabel = (C_LABELS[activeCentury] || activeCentury + 'e') + ' siècle';
+        const hasContent = !!descData.content;
+        const chevron = hasContent ? '<i class="bi bi-chevron-down century-chevron"></i>' : '';
+        const contentHtml = hasContent
+            ? `<div class="century-content">${esc(descData.content)}</div>`
+            : '';
+        descEl.innerHTML =
+            `<div class="century-title-row">${chevron}<strong>${esc(centuryLabel)}\u00a0:</strong> ${esc(descData.title)}</div>${contentHtml}`;
+
+        if (hasContent) {
+            descEl.querySelector('.century-title-row').onclick = () => {
+                descEl.classList.toggle('expanded');
+            };
+            descEl.querySelector('.century-title-row').style.cursor = 'pointer';
+        }
+        descEl.classList.remove('expanded');
+    } else {
+        descEl.textContent = '';
+    }
     renderEvents(events);
 }
 
@@ -455,6 +489,23 @@ function navigatePeriod(direction) {
     const next = idx + direction;
     if (next >= 0 && next < starts.length) {
         selectPeriodFromBar(starts[next]);
+    } else {
+        // Cross century boundary
+        const centuries = [...document.querySelectorAll('.c-btn[data-c]')]
+            .map(b => Number(b.dataset.c)).sort((a, b) => a - b);
+        const cIdx = centuries.indexOf(activeCentury);
+        const nextC = cIdx + direction;
+        if (nextC >= 0 && nextC < centuries.length) {
+            selectCentury(centuries[nextC]);
+            // After century switch, select last or first period
+            setTimeout(() => {
+                const newPeriods = [...document.querySelectorAll('.tl-period[data-start]')]
+                    .filter(p => p.style.opacity !== '0.35').map(p => Number(p.dataset.start));
+                if (newPeriods.length > 0) {
+                    selectPeriodFromBar(direction > 0 ? newPeriods[0] : newPeriods[newPeriods.length - 1]);
+                }
+            }, 50);
+        }
     }
 }
 
