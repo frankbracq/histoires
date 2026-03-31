@@ -195,8 +195,9 @@ body {
 .tl-period {
     flex-shrink: 0;
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
+    align-items: flex-start; justify-content: center;
     gap: 2px;
+    padding-left: 4px;
     font-size: 0.7rem; font-weight: 600;
     color: var(--muted);
     border-right: 1px solid var(--border);
@@ -208,11 +209,15 @@ body {
 .tl-period.active .tl-dot { background: #fff; }
 .tl-period-year { font-size: 0.68rem; }
 .tl-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--accent); flex-shrink: 0;
+    position: absolute;
+    left: 4px; bottom: 4px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
 }
 .tl-count {
-    font-size: 0.55rem; font-weight: 400; opacity: 0.6;
+    position: absolute;
+    left: 14px; bottom: 3px;
+    font-size: 0.5rem; font-weight: 400; opacity: 0.6;
 }
 
 /* Year pills — sub-navigation within selected 5-year period */
