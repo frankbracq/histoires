@@ -197,14 +197,26 @@ body {
     font-size: 0.7rem; font-weight: 600;
     color: var(--muted);
     border-left: 1px solid var(--border);
-    cursor: pointer; transition: background 0.15s;
+    cursor: pointer;
     position: relative;
 }
 .tl-period:last-child { border-right: 1px solid var(--border); }
-.tl-period:hover { background: var(--accent-light); }
-.tl-period.active { background: var(--accent); color: #fff; }
-.tl-period.active .tl-dot { background: #fff; }
-.tl-period.active .tl-count { color: #fff; opacity: 0.8; }
+/* Active indicator: thin bar at middle height, not full background */
+.tl-period::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: 40%; height: 30%;
+    border-radius: 2px;
+    background: transparent;
+    transition: background 0.15s;
+    z-index: 0;
+}
+.tl-period:hover::after { background: var(--accent-light); }
+.tl-period.active::after { background: var(--accent); opacity: 0.3; }
+/* Labels and dots always stay accent color */
+.tl-period.active .tl-period-year { color: var(--accent); font-weight: 700; }
+.tl-period.active .tl-count { font-weight: 600; }
 
 /* Year label centered on the left border (straddles the boundary) */
 .tl-period-year {
