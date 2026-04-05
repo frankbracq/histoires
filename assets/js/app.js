@@ -352,9 +352,20 @@ function renderEvents(events) {
         const catEvents = byCategory[cat.key];
         if (!catEvents) continue;
 
-        // Find parent bars
+        // Find parent bars:
+        // 1. Parents referenced by child events in this year
+        // 2. Events that ARE parents themselves (isParent + endDate) in this year
         const parentIds = new Set(catEvents.filter(e => e.parentId).map(e => e.parentId));
         const candidates = [...parentIds].map(id => eventIndex.get(id)).filter(e => e?.endDate);
+
+        // Also include events in this year that are parents with duration
+        for (const e of catEvents) {
+            if (e.isParent && e.endDate && !candidates.some(c => c.id === e.id)) {
+                candidates.push(e);
+            }
+        }
+
+        // Keep only lowest-level parents (remove grandparents)
         const candidateIds = new Set(candidates.map(e => e.id));
         for (const e of candidates) {
             if (e.parentId && candidateIds.has(e.parentId)) candidateIds.delete(e.parentId);
@@ -375,7 +386,15 @@ function renderEvents(events) {
                 const endParts = p.endDate.split('/');
                 const endYear = endParts[endParts.length - 1];
                 const bg = PARENT_COLORS[i % PARENT_COLORS.length];
-                return `<div class="parent-bar" style="background:${bg}">${esc(p.title)}<span class="parent-bar-dates">${p.year}–${endYear}</span></div>`;
+                const hasSummary = !!p.summary;
+                const chevron = hasSummary ? '<i class="bi bi-chevron-down parent-bar-chevron"></i>' : '';
+                const summaryHtml = hasSummary
+                    ? `<div class="parent-bar-summary">${esc(p.summary)}</div>`
+                    : '';
+                const wikiLink = p.wikiTitle && p.summary
+                    ? ` <a href="https://fr.wikipedia.org/wiki/${encodeURIComponent(p.wikiTitle)}" target="_blank" rel="noopener" class="parent-bar-wiki" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right"></i></a>`
+                    : '';
+                return `<div class="parent-bar${hasSummary ? ' has-summary' : ''}" style="background:${bg}" onclick="this.classList.toggle('expanded')">${chevron}<span class="parent-bar-title">${esc(p.title)}</span>${wikiLink}<span class="parent-bar-dates">${p.year}–${endYear}</span>${summaryHtml}</div>`;
             }).join('') + '</div>';
         }
 
