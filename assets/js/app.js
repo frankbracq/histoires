@@ -230,6 +230,8 @@ function buildYearPills(periodStart) {
         btn.className = 'yr-pill' + (count === 0 ? ' empty' : '');
         btn.dataset.year = y;
         btn.disabled = count === 0;
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', 'false');
         btn.innerHTML = `${y}${count ? ` <span class="yr-cnt">${count}</span>` : ''}`;
         btn.onclick = () => selectYear(y);
         container.appendChild(btn);
@@ -243,9 +245,11 @@ function buildYearPills(periodStart) {
 
 function selectYear(y) {
     activeYear = y;
-    document.querySelectorAll('.yr-pill').forEach(p =>
-        p.classList.toggle('active', Number(p.dataset.year) === y)
-    );
+    document.querySelectorAll('.yr-pill').forEach(p => {
+        const isActive = Number(p.dataset.year) === y;
+        p.classList.toggle('active', isActive);
+        p.setAttribute('aria-selected', String(isActive));
+    });
     applyFilters();
 }
 
@@ -318,20 +322,12 @@ function applyFilters() {
     if (descData?.title) {
         const centuryLabel = (C_LABELS[activeCentury] || activeCentury + 'e') + ' siècle';
         const hasContent = !!descData.content;
-        const chevron = hasContent ? '<i class="bi bi-chevron-down century-chevron"></i>' : '';
-        const contentHtml = hasContent
-            ? `<div class="century-content">${esc(descData.content)}</div>`
-            : '';
-        descEl.innerHTML =
-            `<div class="century-title-row">${chevron}<strong>${esc(centuryLabel)}\u00a0:</strong> ${esc(descData.title)}</div>${contentHtml}`;
-
         if (hasContent) {
-            descEl.querySelector('.century-title-row').onclick = () => {
-                descEl.classList.toggle('expanded');
-            };
-            descEl.querySelector('.century-title-row').style.cursor = 'pointer';
+            descEl.innerHTML =
+                `<details class="century-details"><summary><strong>${esc(centuryLabel)}\u00a0:</strong> ${esc(descData.title)}</summary><p>${esc(descData.content)}</p></details>`;
+        } else {
+            descEl.innerHTML = `<strong>${esc(centuryLabel)}\u00a0:</strong> ${esc(descData.title)}`;
         }
-        descEl.classList.remove('expanded');
     } else {
         descEl.textContent = '';
     }
@@ -398,34 +394,79 @@ function renderEvents(events) {
             }).join('') + '</div>';
         }
 
-        // Cards
+        // Cards — built from <template> via cloneNode
         const sorted = [...filtered].sort((a, b) => dateSortKey(a) - dateSortKey(b));
-        const cardsHtml = sorted.map(e => {
+        const cardTemplate = document.getElementById('evCardTemplate');
+        const cardsFragment = document.createDocumentFragment();
+
+        for (const e of sorted) {
             const colorIdx = e.parentId ? pColorMap.get(e.parentId) : undefined;
             const pColor = colorIdx !== undefined ? PARENT_COLORS[colorIdx % PARENT_COLORS.length] : null;
-            const borderStyle = pColor ? `border-left:3px solid ${pColor}` : '';
-            const titleStyle = pColor ? `color:${pColor}` : '';
 
-            const img = e.imageUrl
-                ? `<img class="ev-img" src="${esc(e.imageUrl)}" loading="lazy" alt="">`
-                : `<div class="ev-img-ph"><i class="bi ${cat.icon}"></i></div>`;
+            const clone = cardTemplate.content.firstElementChild.cloneNode(true);
 
-            const tag = e.wikiTitle && e.summary ? 'a' : 'div';
-            const href = e.wikiTitle && e.summary
-                ? ` href="https://fr.wikipedia.org/wiki/${encodeURIComponent(e.wikiTitle)}" target="_blank" rel="noopener"` : '';
+            // Border color for parent grouping
+            if (pColor) clone.style.borderLeft = `3px solid ${pColor}`;
+
+            // If wiki link, convert article to anchor
+            const isLink = e.wikiTitle && e.summary;
+            let card;
+            if (isLink) {
+                card = document.createElement('a');
+                for (const attr of clone.attributes) card.setAttribute(attr.name, attr.value);
+                card.innerHTML = clone.innerHTML;
+                card.href = `https://fr.wikipedia.org/wiki/${encodeURIComponent(e.wikiTitle)}`;
+                card.target = '_blank';
+                card.rel = 'noopener';
+                if (pColor) card.style.borderLeft = `3px solid ${pColor}`;
+            } else {
+                card = clone;
+            }
+
+            // Image
+            const imgSlot = card.querySelector('.ev-img-ph');
+            if (e.imageUrl) {
+                const img = document.createElement('img');
+                img.className = 'ev-img';
+                img.src = e.imageUrl;
+                img.loading = 'lazy';
+                img.alt = e.title || 'Événement historique';
+                imgSlot.replaceWith(img);
+            } else {
+                imgSlot.querySelector('i').className = `bi ${cat.icon}`;
+            }
+
+            // Date
+            const timeEl = card.querySelector('.ev-date');
+            const dateDisplay = e.date || String(e.year);
+            const isoDate = toIsoDate(e.date, e.year);
+            if (isoDate) timeEl.setAttribute('datetime', isoDate);
+            timeEl.textContent = dateDisplay;
+
+            // Title
+            const titleEl = card.querySelector('.ev-title');
+            titleEl.textContent = e.title;
+            if (pColor) titleEl.style.color = pColor;
+
+            // Scope
             const scopeLabel = SCOPES.find(s => s.key === e.scope)?.label || '';
-            const summaryHtml = e.summary ? `<div class="ev-summary">${esc(e.summary)}</div>` : '';
+            card.querySelector('.ev-scope').textContent = scopeLabel;
 
-            return `<${tag} class="ev-card" style="${borderStyle}"${href}>
-                ${img}
-                <div class="ev-body">
-                    <span class="ev-date">${e.date || e.year}</span>
-                    <span class="ev-title" style="${titleStyle}">${esc(e.title)}</span>
-                    <span class="ev-scope">${scopeLabel}</span>
-                    ${summaryHtml}
-                </div>
-            </${tag}>`;
-        }).join('');
+            // Summary
+            const summaryEl = card.querySelector('.ev-summary');
+            if (e.summary) {
+                summaryEl.textContent = e.summary;
+            } else {
+                summaryEl.remove();
+            }
+
+            cardsFragment.appendChild(card);
+        }
+
+        // Serialize fragment to HTML for insertion into the grid
+        const cardsDiv = document.createElement('div');
+        cardsDiv.appendChild(cardsFragment);
+        const cardsHtml = cardsDiv.innerHTML;
 
         html.push(`<div class="cat-row">
             <div class="cat-header">
@@ -578,6 +619,14 @@ function dateSortKey(evt) {
     if (p.length === 3) return parseInt(p[2]) * 10000 + parseInt(p[1]) * 100 + parseInt(p[0]);
     if (p.length === 2) return parseInt(p[1]) * 10000 + parseInt(p[0]) * 100 + 1;
     return (evt.year || 0) * 10000 + 101;
+}
+
+function toIsoDate(dateStr, year) {
+    if (!dateStr) return year ? String(year) : null;
+    const p = dateStr.split('/');
+    if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
+    if (p.length === 2) return `${p[1]}-${p[0]}`;
+    return null;
 }
 
 function esc(s) {

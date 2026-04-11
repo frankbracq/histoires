@@ -5,81 +5,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>histoir.es — Chronologie de l'Histoire de France</title>
     <meta name="description" content="Explorez l'histoire de France de Clovis à nos jours : événements, dirigeants, guerres, sciences, culture.">
+    <meta name="theme-color" content="#8b4513">
+    <link rel="canonical" href="https://histoir.es/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://histoir.es/">
+    <meta property="og:title" content="histoir.es — Chronologie de l'Histoire de France">
+    <meta property="og:description" content="Explorez l'histoire de France de Clovis à nos jours : événements, dirigeants, guerres, sciences, culture.">
+    <meta property="og:locale" content="fr_FR">
+    <meta name="twitter:card" content="summary">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://historical-events.genealogie.app">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
+    <!-- Skip link -->
+    <a href="#eventsGrid" class="skip-link">Aller au contenu</a>
+
     <!-- Header -->
     <header class="site-header">
         <div class="header-inner">
             <a href="/" class="logo">histoir<span class="logo-dot">.es</span></a>
             <div class="header-search">
-                <i class="bi bi-search"></i>
-                <input type="text" id="searchInput" placeholder="Rechercher..." autocomplete="off">
+                <label for="searchInput" class="visually-hidden">Rechercher un événement</label>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" id="searchInput" placeholder="Rechercher..." autocomplete="off" inputmode="search">
             </div>
-            <button class="filter-toggle" id="filterToggle" title="Filtres">
-                <i class="bi bi-funnel"></i>
+            <button class="filter-toggle" id="filterToggle" aria-label="Ouvrir les filtres">
+                <i class="bi bi-funnel" aria-hidden="true"></i>
             </button>
-            <span class="header-count" id="eventCount"></span>
+            <span class="header-count" id="eventCount" aria-live="polite"></span>
         </div>
     </header>
 
     <!-- Timeline bar -->
-    <section class="timeline-section">
+    <section class="timeline-section" aria-label="Frise chronologique">
         <!-- Century selector -->
-        <nav class="century-bar" id="centuryBar">
+        <nav class="century-bar" id="centuryBar" aria-label="Navigation par siècle">
             <!-- Populated by JS -->
         </nav>
 
         <!-- Horizontal scrollable timeline -->
         <div class="timeline-wrapper">
-            <button class="tl-nav tl-nav-left" id="tlNavLeft"><i class="bi bi-chevron-left"></i></button>
-            <div class="timeline-viewport" id="timelineViewport">
+            <button class="tl-nav tl-nav-left" id="tlNavLeft" aria-label="Défiler vers la gauche"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+            <div class="timeline-viewport" id="timelineViewport" role="region" aria-label="Frise des périodes">
                 <div class="timeline-scroll" id="timelineScroll">
-                    <!-- Leaders band -->
-                    <div class="tl-band tl-leaders" id="leadersBand"></div>
-                    <!-- Wars band -->
-                    <div class="tl-band tl-wars" id="warsBand"></div>
-                    <!-- Period markers -->
+                    <div class="tl-band tl-leaders" id="leadersBand" aria-label="Dirigeants"></div>
+                    <div class="tl-band tl-wars" id="warsBand" aria-label="Guerres"></div>
                     <div class="tl-periods" id="periodMarkers"></div>
                 </div>
             </div>
-            <button class="tl-nav tl-nav-right" id="tlNavRight"><i class="bi bi-chevron-right"></i></button>
+            <button class="tl-nav tl-nav-right" id="tlNavRight" aria-label="Défiler vers la droite"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
         </div>
     </section>
 
-    <!-- Year pills (sub-navigation within selected 5-year period) -->
-    <nav class="year-pills-bar">
-        <div class="year-pills" id="yearPills">
+    <!-- Year pills -->
+    <nav class="year-pills-bar" aria-label="Navigation par année">
+        <div class="year-pills" id="yearPills" role="tablist">
             <!-- Populated by JS -->
         </div>
     </nav>
 
     <!-- Offcanvas filters -->
     <div class="offcanvas-overlay" id="offcanvasOverlay"></div>
-    <aside class="offcanvas-panel" id="offcanvasPanel">
+    <aside class="offcanvas-panel" id="offcanvasPanel" role="complementary" aria-label="Filtres">
         <div class="offcanvas-header">
             <h3>Filtres</h3>
-            <button class="offcanvas-close" id="offcanvasClose"><i class="bi bi-x-lg"></i></button>
+            <button class="offcanvas-close" id="offcanvasClose" aria-label="Fermer les filtres"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
         </div>
         <div class="offcanvas-body">
             <h4>Catégories</h4>
-            <div id="categoryFilters"></div>
+            <div id="categoryFilters" role="group" aria-label="Filtrer par catégorie"></div>
             <h4>Portée</h4>
-            <div id="scopeFilters"></div>
+            <div id="scopeFilters" role="group" aria-label="Filtrer par portée"></div>
         </div>
     </aside>
 
     <!-- Main content -->
     <main class="main-content">
-        <section class="events-panel">
+        <section class="events-panel" aria-label="Événements historiques">
             <p class="century-desc" id="centuryDesc"></p>
             <div class="events-header">
                 <h2 id="periodTitle">Chargement...</h2>
-                <span class="events-count" id="filteredCount"></span>
+                <span class="events-count" id="filteredCount" aria-live="polite"></span>
             </div>
             <div class="events-grid" id="eventsGrid">
                 <!-- Populated by JS -->
@@ -90,6 +103,19 @@
     <footer class="site-footer">
         <p>histoir.es — Données issues de sources historiques et Wikipedia</p>
     </footer>
+
+    <!-- Card template -->
+    <template id="evCardTemplate">
+        <article class="ev-card">
+            <div class="ev-img-ph"><i aria-hidden="true"></i></div>
+            <div class="ev-body">
+                <time class="ev-date"></time>
+                <span class="ev-title"></span>
+                <span class="ev-scope"></span>
+                <div class="ev-summary"></div>
+            </div>
+        </article>
+    </template>
 
     <script src="/assets/js/app.js" type="module"></script>
 </body>
