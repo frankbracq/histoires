@@ -273,8 +273,8 @@ body {
 
 /* --- Main content --- */
 .main-content {
-    max-width: 1600px; margin: 0 auto;
-    padding: 0.75rem 1rem;
+    width: 100%;
+    padding: 0.75rem 1.25rem;
 }
 
 /* Offcanvas filters */
@@ -391,17 +391,21 @@ body {
     display: flex; flex-direction: column; gap: 0.6rem;
 }
 .cat-row {
-    display: flex; align-items: stretch; gap: 0.5rem;
+    display: flex; flex-direction: column; gap: 0.25rem;
+}
+.cat-header {
+    display: flex; align-items: stretch; gap: 0.4rem;
 }
 .cat-label {
-    flex-shrink: 0; width: 110px;
-    display: flex; align-items: center; gap: 0.3rem;
-    padding: 0.25rem 0.4rem; border-radius: 4px;
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.2rem 0.55rem; border-radius: 4px;
     color: #fff; font-size: 0.68rem; font-weight: 600;
-    white-space: normal; line-height: 1.15;
-    align-self: flex-start;
+    white-space: nowrap; line-height: 1.15;
 }
 .cat-label i { font-size: 0.75rem; flex-shrink: 0; }
+/* When parent bar is in header, fill the remaining space */
+.cat-header .parent-bar-container { flex: 1; min-width: 0; margin-bottom: 0; }
 
 /* Parent bar */
 .parent-bar-container { display: flex; gap: 0.3rem; margin-bottom: 0.2rem; }
@@ -454,7 +458,7 @@ body {
     overflow-y: auto;
 }
 
-.cat-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.cat-content { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
 
 .cards-scroll {
     display: flex; gap: 0.4rem;

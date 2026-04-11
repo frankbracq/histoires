@@ -428,8 +428,11 @@ function renderEvents(events) {
         }).join('');
 
         html.push(`<div class="cat-row">
-            <div class="cat-label" style="background:${cat.color}"><i class="bi ${cat.icon}"></i><span>${cat.label}</span></div>
-            <div class="cat-content">${barsHtml}<div class="cards-scroll">${cardsHtml}</div></div>
+            <div class="cat-header">
+                <div class="cat-label" style="background:${cat.color}"><i class="bi ${cat.icon}"></i><span>${cat.label}</span></div>
+                ${barsHtml}
+            </div>
+            <div class="cards-scroll">${cardsHtml}</div>
         </div>`);
     }
 
